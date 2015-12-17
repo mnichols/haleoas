@@ -1,0 +1,57 @@
+{
+  "name": "haleoas",
+  "version": "0.1.0",
+  "description": "HAL client",
+  "main": "./dist/haleoas.js",
+  "scripts": {
+    "clean": "rimraf dist/* && mkdir dist || true",
+    "test": "babel-tape-runner ./test/**/*-spec.js # | faucet",
+    "build": "npm run clean && babel src --out-dir dist",
+    "docs": "doxx --source src --target docs",
+    "gh-pages": "npm run docs && gh-pages -d docs",
+    "prepublish": "npm run build && npm test && npm run gh-pages"
+  },
+  "babel": {
+    "presets": [
+      "node5"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mnichols/haleoas"
+  },
+  "keywords": [
+    "hypermedia",
+    "rest-client",
+    "hateoas",
+    "HAL",
+    "orangutans"
+  ],
+  "author": "Mike Nichols <nichols.mike.s@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mnichols/haleoas/issues"
+  },
+  "homepage": "https://github.com/mnichols/haleoas",
+  "devDependencies": {
+    "babel-cli": "^6.3.17",
+    "babel-preset-node5": "^6.2.1",
+    "babel-tape-runner": "^1.3.0",
+    "blue-tape": "^0.1.10",
+    "browser-run": "^2.1.2",
+    "deep-equal": "^1.0.1",
+    "doxx": "^2.0.0",
+    "faucet": "0.0.1",
+    "fetch-mock": "^3.0.3",
+    "gh-pages": "^0.4.0",
+    "rimraf": "^2.4.3"
+  },
+  "dependencies": {
+    "cuid": "^1.2.5",
+    "isomorphic-fetch": "^2.2.0",
+    "json-patch-gen": "^1.0.2",
+    "stampit": "^2.1.0",
+    "url-template": "^2.0.6",
+    "whatwg-fetch": "^0.10.1"
+  }
+}
