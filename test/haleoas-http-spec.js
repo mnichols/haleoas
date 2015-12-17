@@ -75,6 +75,44 @@ test('invalid content-type doesnt throw',(assert) => {
     .then(fetchMock.restore.bind(fetchMock))
 
 })
+test('simple HEAD works',(assert) => {
+    let self = { href: 'http://a.com/orders'}
+    fetchMock.mock(self.href, 'HEAD', {
+        headers: {
+            'content-type': 'application/hal+json'
+            , 'allow': 'GET,PUT,POST,DELETE'
+        }
+        ,status: 204
+    })
+
+    let sut = hal({
+        self: self.href
+        , fetch
+    })
+    return sut.head().then((it) => {
+        assert.deepEqual(sut.allow(),['GET','PUT','POST','DELETE'])
+    })
+    .then(fetchMock.restore.bind(fetchMock))
+})
+test('simple OPTIONS works',(assert) => {
+    let self = { href: 'http://a.com/orders'}
+    fetchMock.mock(self.href, 'OPTIONS', {
+        headers: {
+            'content-type': 'application/hal+json'
+            , 'allow': 'GET,PUT,POST,DELETE'
+        }
+        ,status: 200
+    })
+
+    let sut = hal({
+        self: self.href
+        , fetch
+    })
+    return sut.options().then((it) => {
+        assert.deepEqual(sut.allow(),['GET','PUT','POST','DELETE'])
+    })
+    .then(fetchMock.restore.bind(fetchMock))
+})
 test('simple GET works',(assert) => {
     let body = fullyLoaded()
     let matcher = (url, opts) => {
@@ -217,6 +255,50 @@ test('DELETE works',(assert) => {
     return sut.delete().then(({response, resource}) => {
         assert.equal(response.statusText,'No Content')
         assert.equal(resource.self,'http://a.com/orders')
+    })
+    .then(fetchMock.restore.bind(fetchMock))
+})
+test('PUT resulting sends full body and syncs',(assert) => {
+    let self = { href: 'http://a.com/orders'}
+    let bodyBefore = fullyLoaded()
+    let bodyAfter = fullyLoaded()
+    let expectBody = Object.assign(
+        {currentlyProcessing: 14, foo: 'bar'}
+        , { _embedded: bodyBefore._embedded }
+    )
+    let matcher = (url, opts) => {
+        let {'content-type':contentType} = opts.headers
+        return contentType === 'application/json' &&
+            url === self.href &&
+            deepEqual(JSON.parse(opts.body), expectBody)
+    }
+    fetchMock.mock(matcher, 'PUT', {
+        headers: { }
+        ,status: 204
+    })
+    fetchMock.mock(self.href, 'GET', {
+        body: bodyAfter
+        , headers: {
+            'content-type': 'application/hal+json'
+        }
+        ,status: 200
+    })
+
+    let body = fullyLoaded()
+    let sut = hal({
+        self: self.href
+        , fetch
+        , body:bodyBefore
+    })
+    //add an attribute, remove an attribute
+    sut.foo = 'bar'
+    ;(delete sut.shippedToday)
+
+    //verify we reget our things
+    bodyAfter.foo = 'baz'
+    return sut.put().then(({resource}) => {
+        assert.equal(resource.self,self.href)
+        assert.equal(resource.foo,'baz')
     })
     .then(fetchMock.restore.bind(fetchMock))
 })

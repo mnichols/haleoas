@@ -23,8 +23,8 @@ const link = stampit()
 })
 
 const haleoas = stampit()
-.init(function(){
-    let body,links,embedded
+.init(function({instance, stamp}){
+    let body,links,embedded, allow = []
     this.logerror = (this.logerror || this.log || console.error.bind(console))
     this.log = (this.log || console.log.bind(console))
 
@@ -47,6 +47,15 @@ const haleoas = stampit()
         Object.assign(this,copy)
         return json
     }
+    const headerHandler = (method) => {
+        return (response) => {
+            let allows = response.headers.get('allow')
+            if(allows) {
+                this.allow(allows.split(','))
+            }
+            return response
+        }
+    }
     const bodyHandler = (method) => {
         return (response) => {
             let contentType = response.headers.get('content-type')
@@ -63,10 +72,47 @@ const haleoas = stampit()
         }
     }
 
+    const respond = (method) => {
+        return (response) => {
+            return {
+                resource: this
+                , response
+            }
+        }
+    }
+
+    const sync = (self) => {
+        return haleoas({
+            self
+            , fetch: this.fetch
+        }).get()
+    }
+
+    const stringifyReplacer = (key, value) => {
+        if(key === '_links') {
+            //do not include in serialization
+            return undefined
+        }
+        return value
+    }
+
     //api
+    this.clone = () => stamp(instance)
+
     this.toJSON = function() {
+        //properties (not methods) only
+        let copy = Object.keys(this)
+        .filter((key) => {
+            return typeof this[key] !== 'function'
+        })
+        .reduce((obj,key)=> {
+            obj[key] = this[key]
+            return obj
+        }, {})
+
         //reconstruct
-        let result = Object.assign({},body)
+        let result = copy
+        ;(delete result.self)
         result._links = Object.assign({},links)
         result._embedded = Object.assign({},embedded)
         return result
@@ -92,9 +138,20 @@ const haleoas = stampit()
         let result = [].concat(matches)
         return result
     }
+    /**
+     * what methods are ALLOWed?
+     * getter/setter (Array) of HTTP methods
+     * @return {Array} of HTTP methods retrieved by `ALLOW` response header
+     * */
+    this.allow = function(methods) {
+        if(methods) { allow = methods }
+        return allow
+    }
+
+    //http
     this.post = function(data = {}) {
-        let url = this.self
-        let req = {
+        const url = this.self
+        const req = {
             credentials: 'include'
             , method: 'POST'
             , headers: {
@@ -107,28 +164,39 @@ const haleoas = stampit()
         .then((response) => {
             let location = response.headers.get('location')
             if(location) {
-                return haleoas({
-                    self: location
-                    , fetch: this.fetch
-                }).get()
+                return sync(location)
             }
             return Promise.resolve(response)
-            .then(bodyHandler('POST'))
-            .then((response)=> {
-                return {
-                    resource: this
-                    , response
-                }
-            })
+            .then(bodyHandler(req.method))
+            .then(headerHandler(req.method))
+            .then(respond(req.method))
         })
     }
 
+    this.put = function() {
+        const url = this.self
+        let serialized = this.toJSON()
+        //dont include _links
+        ;(delete serialized._links)
+        const req = {
+            credentials: 'include'
+            , method: 'PUT'
+            , headers: {
+                'accept': MIME
+                ,'content-type': 'application/json'
+            }
+            , body: JSON.stringify(serialized)
+        }
+        return this.fetch(url, req)
+        .then(headerHandler(req.method))
+        .then(sync.bind(this,this.self))
+    }
     this.get = function(params) {
         let url = this.self
         if(params) {
             url  = this.expand(url,params)[0]
         }
-        let req = {
+        const req = {
             credentials: 'include'
             , method: 'GET'
             , headers: {
@@ -139,22 +207,18 @@ const haleoas = stampit()
             , body: undefined
         }
         return this.fetch(url, req)
-        .then(bodyHandler('GET'))
+        .then(bodyHandler(req.method))
+        .then(headerHandler(req.method))
         .then(correctSelf)
-        .then((response) => {
-            return {
-                resource: this
-                , response
-            }
-        })
+        .then(respond(req.method))
     }
 
     /**
      * http://tools.ietf.org/html/rfc2616#section-9.7
      * */
     this.delete = function() {
-        let url = this.self
-        let req = {
+        const url = this.self
+        const req = {
             credentials: 'include'
             , method: 'DELETE'
             , headers: {
@@ -163,21 +227,17 @@ const haleoas = stampit()
             }
         }
         return this.fetch(url, req)
+        .then(headerHandler(req.method))
         //@TODO handle 200
         //by parsing to a HAL status entity
         //and return that?
-        .then((response) => {
-            return {
-                resource: this
-                , response
-            }
-        })
+        .then(respond(req.method))
     }
     /**
      * http://tools.ietf.org/html/rfc6902
      * */
     this.patch  = function(to = {}) {
-        let url = this.self
+        const url = this.self
         let patch = diff(body || {},to)
         let req = {
             credentials: 'include'
@@ -189,12 +249,40 @@ const haleoas = stampit()
             , body: patch
         }
         return this.fetch(url, req)
-        .then(this.get.bind(this))
+        .then(headerHandler(req.method))
+        .then(sync.bind(this,this.self))
+    }
+
+    this.options = function() {
+        let url = this.self
+        let req = {
+            credentials: 'include'
+            , method: 'OPTIONS'
+            , headers: {}
+            , body: undefined
+        }
+        return this.fetch(url, req)
+        .then(headerHandler(req.method))
+        .then(respond(req.method))
+    }
+    this.head = function() {
+        let url = this.self
+        let req = {
+            credentials: 'include'
+            , method: 'HEAD'
+            , headers: { }
+            , body: undefined
+        }
+        return this.fetch(url, req)
+        .then(headerHandler(req.method))
+        .then(respond(req.method))
     }
 
     //preload
     if(this.body) {
-        parse(this.body)
+        let copy = this.body
+        ;(delete this.body)
+        parse(copy)
         correctSelf()
     }
     if(this.self) {
