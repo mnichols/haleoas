@@ -148,6 +148,19 @@ const haleoas = stampit()
         return allow
     }
 
+    this.follow = function(rel) {
+        let lnks = this.links(rel)
+        if(!lnks.length) {
+            throw new Error(`${this.self} not related with '${rel}'`)
+        }
+        //allow non-global Promise
+        let P = (this.Promise || Promise)
+        let promises = lnks.map((lnk) => {
+            return haleoas({ self: lnk.href, fetch: this.fetch }).get()
+        })
+        return P.all(promises)
+    }
+
     //http
     this.post = function(data = {}) {
         const url = this.self
@@ -166,7 +179,9 @@ const haleoas = stampit()
             if(location) {
                 return sync(location)
             }
-            return Promise.resolve(response)
+            //allow non-global Promise
+            let P = (this.Promise || Promise)
+            return P.resolve(response)
             .then(bodyHandler(req.method))
             .then(headerHandler(req.method))
             .then(respond(req.method))
