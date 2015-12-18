@@ -6,26 +6,31 @@ import fetchMock from 'fetch-mock'
 import deepEqual from 'deep-equal'
 import 'isomorphic-fetch'
 
+const getOrigin = () => {
+    if(window) { return window.location.origin}
+    return 'http://example.com'
+}
+const origin = getOrigin()
 const fullyLoaded = () => {
     let body = {
         "_links": {
-            "self": { "href": "http://a.com/orders" },
+            "self": { "href": `${origin}/orders` },
             "curies": [{ "name": "ea", "href": "http://example.com/docs/rels/{rel}", "templated": true }],
-            "next": { "href": "http://a.com/orders?page=2" },
+            "next": { "href": `${origin}/orders?page=2` },
             "ea:find": {
-                "href": "/orders{?id}",
+                "href": `${origin}/orders{?id}`,
                 "templated": true
             },
             "ea:multi": [
-                { "href": "http://a.com/a{?foo}", "templated":true},
-                { "href": "http://a.com/b{?foo}", "templated":true},
-                { "href": "http://a.com/c{?foo}", "templated":true}
+                { "href": `${origin}/a{?foo}`, "templated":true},
+                { "href": `${origin}/b{?foo}`, "templated":true},
+                { "href": `${origin}/c{?foo}`, "templated":true}
             ],
             "ea:admin": [{
-                "href": "http://a.com/admins/2",
+                "href": `${origin}/admins/2`,
                 "title": "Fred"
             }, {
-                "href": "http://a.com/admins/5",
+                "href": `${origin}/admins/5`,
                 "title": "Kate"
             }]
         },
@@ -34,18 +39,18 @@ const fullyLoaded = () => {
         "_embedded": {
             "ea:order": [{
                 "_links": {
-                    "self": { "href": "http://a.com/orders/123" },
-                    "ea:basket": { "href": "http://a.com/baskets/98712" },
-                    "ea:customer": { "href": "http://a.com/customers/7809" }
+                    "self": { "href": `${origin}/orders/123` },
+                    "ea:basket": { "href": `${origin}/baskets/98712` },
+                    "ea:customer": { "href": `${origin}/customers/7809` }
                 },
                 "total": 30.00,
                 "currency": "USD",
                 "status": "shipped"
             }, {
                 "_links": {
-                    "self": { "href": "http://a.com/orders/124" },
-                    "ea:basket": { "href": "http://a.com/baskets/97213" },
-                    "ea:customer": { "href": "http://a.com/customers/12369" }
+                    "self": { "href": `${origin}/orders/124` },
+                    "ea:basket": { "href": `${origin}/baskets/97213` },
+                    "ea:customer": { "href": `${origin}/customers/12369` }
                 },
                 "total": 20.00,
                 "currency": "USD",
@@ -57,7 +62,7 @@ const fullyLoaded = () => {
 }
 
 test('invalid content-type doesnt throw',(assert) => {
-    fetchMock.mock('http://a.com/orders','GET', {
+    fetchMock.mock(`${origin}/orders`,'GET', {
         body: 'plain'
         ,headers: {
             'content-type': 'text/plain'
@@ -66,23 +71,24 @@ test('invalid content-type doesnt throw',(assert) => {
     })
 
     let sut = hal({
-        self: 'http://a.com/orders'
+        self: `${origin}/orders`
         , fetch
     })
     return sut.get().catch((err) => {
-        assert.equal(err.message,'illegal content type at http://a.com/orders : text/plain')
+        assert.equal(err.message,'illegal content type at ${origin}/orders : text/plain')
     })
     .then(fetchMock.restore.bind(fetchMock))
 
 })
 test('simple HEAD works',(assert) => {
-    let self = { href: 'http://a.com/orders'}
+    let self = { href: `${origin}/orders`}
     fetchMock.mock(self.href, 'HEAD', {
         headers: {
             'content-type': 'application/hal+json'
             , 'allow': 'GET,PUT,POST,DELETE'
         }
         ,status: 204
+        , body: null
     })
 
     let sut = hal({
@@ -95,13 +101,14 @@ test('simple HEAD works',(assert) => {
     .then(fetchMock.restore.bind(fetchMock))
 })
 test('simple OPTIONS works',(assert) => {
-    let self = { href: 'http://a.com/orders'}
+    let self = { href: `${origin}/orders`}
     fetchMock.mock(self.href, 'OPTIONS', {
         headers: {
             'content-type': 'application/hal+json'
             , 'allow': 'GET,PUT,POST,DELETE'
         }
-        ,status: 200
+        ,status: 204
+        ,body: null
     })
 
     let sut = hal({
@@ -117,7 +124,7 @@ test('simple GET works',(assert) => {
     let body = fullyLoaded()
     let matcher = (url, opts) => {
         let {accept} = opts.headers
-        return accept === 'application/hal+json' && url === 'http://a.com/orders'
+        return accept === 'application/hal+json' && url === `${origin}/orders`
     }
     fetchMock.mock(matcher, 'GET', {
         body
@@ -128,7 +135,7 @@ test('simple GET works',(assert) => {
     })
 
     let sut = hal({
-        self: 'http://a.com/orders'
+        self: `${origin}/orders`
         , fetch
     })
     return sut.get().then((it) => {
@@ -139,7 +146,7 @@ test('simple GET works',(assert) => {
 
 test('GET with RFC6570 params works',(assert) => {
     let body = fullyLoaded()
-    fetchMock.mock('http://a.com/orders?page=2&size=10', 'GET', {
+    fetchMock.mock(`${origin}/orders?page=2&size=10`, 'GET', {
         body
         ,headers: {
             'content-type': 'application/hal+json'
@@ -148,7 +155,7 @@ test('GET with RFC6570 params works',(assert) => {
     })
 
     let sut = hal({
-        self: 'http://a.com/orders{?page,size}'
+        self: `${origin}/orders{?page,size}`
         , fetch
     })
     return sut.get({page:2,size:10}).then((it) => {
@@ -158,7 +165,7 @@ test('GET with RFC6570 params works',(assert) => {
 })
 
 test('GET with http errors dont fail',(assert) => {
-    fetchMock.mock('http://a.com/orders', 'GET', {
+    fetchMock.mock(`${origin}/orders`, 'GET', {
         body: 'You suck'
         ,headers: {
             'content-type': 'text/plain'
@@ -168,7 +175,7 @@ test('GET with http errors dont fail',(assert) => {
     })
 
     let sut = hal({
-        self: 'http://a.com/orders'
+        self: `${origin}/orders`
         , fetch
     })
     return sut.get().catch((err) => {
@@ -182,11 +189,11 @@ test('simple POST works',(assert) => {
         let {'content-type':contentType} = opts.headers
         let { body} = opts
         return contentType === 'application/hal+json' &&
-            url === 'http://a.com/orders' &&
+            url === `${origin}/orders` &&
             body === JSON.stringify({foo:'bar'})
     }
     fetchMock.mock(matcher, 'POST', {
-        body: {}
+        body: null
         , headers: {
             'content-type': 'application/hal+json'
         }
@@ -194,12 +201,12 @@ test('simple POST works',(assert) => {
     })
 
     let sut = hal({
-        self: 'http://a.com/orders'
+        self: `${origin}/orders`
         , fetch
     })
     return sut.post({foo:'bar'}).then(({response, resource}) => {
-        assert.equal(response.statusText, 'No Content')
-        assert.equal(resource.self,'http://a.com/orders')
+        assert.equal(response.status, 204)
+        assert.equal(resource.self,`${origin}/orders`)
     })
     .then(fetchMock.restore.bind(fetchMock))
 })
@@ -209,19 +216,20 @@ test('POST resulting in location follows created entity',(assert) => {
         let {'content-type':contentType} = opts.headers
         let { body} = opts
         return contentType === 'application/hal+json' &&
-            url === 'http://a.com/orders' &&
+            url === `${origin}/orders` &&
             body === JSON.stringify({foo:'bar'})
     }
     fetchMock.mock(matcher, 'POST', {
         headers: {
             'content-type': 'application/hal+json'
-            , location: 'http://a.com/orders/1'
+            , location: `${origin}/orders/1`
         }
         ,status: 201
+        , body: null
     })
-    fetchMock.mock('http://a.com/orders/1', 'GET', {
+    fetchMock.mock(`${origin}/orders/1`, 'GET', {
         body: {
-            _links: { self: { href: 'http://a.com/orders/1' }}
+            _links: { self: { href: `${origin}/orders/1` }}
             , bar: 'foo'
         }
         , headers: {
@@ -231,35 +239,36 @@ test('POST resulting in location follows created entity',(assert) => {
     })
 
     let sut = hal({
-        self: 'http://a.com/orders'
+        self: `${origin}/orders`
         , fetch
     })
     return sut.post({foo:'bar'}).then(({resource}) => {
-        assert.equal(resource.self,'http://a.com/orders/1')
+        assert.equal(resource.self,`${origin}/orders/1`)
         assert.equal(resource.bar,'foo')
     })
     .then(fetchMock.restore.bind(fetchMock))
 })
 test('DELETE works',(assert) => {
-    fetchMock.mock('http://a.com/orders', 'DELETE', {
+    fetchMock.mock(`${origin}/orders`, 'DELETE', {
         headers: {
             'content-type': 'application/hal+json'
         }
         ,status: 204
+        , body: null
     })
 
     let sut = hal({
-        self: 'http://a.com/orders'
+        self: `${origin}/orders`
         , fetch
     })
     return sut.delete().then(({response, resource}) => {
-        assert.equal(response.statusText,'No Content')
-        assert.equal(resource.self,'http://a.com/orders')
+        assert.equal(response.status, 204)
+        assert.equal(resource.self,`${origin}/orders`)
     })
     .then(fetchMock.restore.bind(fetchMock))
 })
 test('PUT resulting sends full body and syncs',(assert) => {
-    let self = { href: 'http://a.com/orders'}
+    let self = { href: `${origin}/orders`}
     let bodyBefore = fullyLoaded()
     let bodyAfter = fullyLoaded()
     let expectBody = Object.assign(
@@ -275,6 +284,7 @@ test('PUT resulting sends full body and syncs',(assert) => {
     fetchMock.mock(matcher, 'PUT', {
         headers: { }
         ,status: 204
+        , body: null
     })
     fetchMock.mock(self.href, 'GET', {
         body: bodyAfter
@@ -303,7 +313,7 @@ test('PUT resulting sends full body and syncs',(assert) => {
     .then(fetchMock.restore.bind(fetchMock))
 })
 test('PATCH works (RFC6902) and refetches the resource', (assert) => {
-    let self = { href: 'http://a.com/orders/1' }
+    let self = { href: `${origin}/orders/1` }
     let body = {
         _links: { self}
         , foo: 'bar'
@@ -330,6 +340,7 @@ test('PATCH works (RFC6902) and refetches the resource', (assert) => {
             'content-type': 'application/hal+json'
         }
         ,status: 204
+        , body: null
     })
     .mock(self.href, 'GET', {
         headers: {
@@ -360,7 +371,8 @@ test('PATCH works (RFC6902) and refetches the resource', (assert) => {
     .then(fetchMock.restore.bind(fetchMock))
 })
 test('PATCH uses current state against original (RFC6902) and refetches the resource', (assert) => {
-    let self = { href: 'http://a.com/orders/1' }
+    let origin = getOrigin()
+    let self = { href: `${origin}/orders/1` }
     let body = {
         _links: { self}
         , foo: 'bar'
@@ -370,7 +382,6 @@ test('PATCH uses current state against original (RFC6902) and refetches the reso
     }
     let matcher = function(url, opts) {
         let {body} = opts
-        console.log('opts',opts.body);
         let patches = [ {
             op: 'replace', path: '/deep/thoughts', value: 'jazz'
         }, {
@@ -388,6 +399,7 @@ test('PATCH uses current state against original (RFC6902) and refetches the reso
             'content-type': 'application/hal+json'
         }
         ,status: 204
+        , body: null
     })
     .mock(self.href, 'GET', {
         headers: {

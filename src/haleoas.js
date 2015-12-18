@@ -278,6 +278,7 @@ const haleoas = stampit()
                 ,'content-type': 'application/json-patch+json'
             }
             , body: patch
+            , mode: 'cors'
         }
         return this.fetch(url, req)
         .then(headerHandler(req.method))
