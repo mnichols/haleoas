@@ -4,24 +4,6 @@ import stampit from 'stampit'
 import urlTemplate from 'url-template'
 import diff from 'json-patch-gen'
 
-const link = stampit()
-.props({
-    href: ''
-    , templated: ''
-    , type: ''
-    , deprecation: ''
-    , name: ''
-    , profile: ''
-    , title: ''
-    , hreflang: ''
-})
-.init(function(){
-    if(!this.href) {
-        throw new Error('href is required for link objects')
-    }
-
-})
-
 const haleoas = stampit()
 .init(function({instance, stamp}){
     let body,links,embedded, allow = []
@@ -99,7 +81,13 @@ const haleoas = stampit()
     //api
     this.clone = () => stamp(instance)
 
-    this.toJSON = function() {
+    /**
+     * serialize this resource to JSON.
+     * Optionally include `{ _links: false }` or `{ _embedded: false }`
+     * to suppress the inclusion of these attributes in the result.
+     * They both default to `true`.
+     * */
+    this.toJSON = function({_links,_embedded} = {}) {
         //properties (not methods) only
         let copy = Object.keys(this)
         .filter((key) => {
@@ -113,10 +101,17 @@ const haleoas = stampit()
         //reconstruct
         let result = copy
         ;(delete result.self)
-        result._links = Object.assign({},links)
-        result._embedded = Object.assign({},embedded)
+        if(typeof _links === 'undefined' || !!_links ) {
+            result._links = Object.assign({},links)
+        }
+        if(typeof _embedded === 'undefined' || !!_embedded ) {
+            result._embedded = Object.assign({},embedded)
+        }
         return result
     }
+    /**
+     * parse a JSON object to hydrate this instance
+     * */
     this.parse = function(_body){
         parse(_body)
         return this
@@ -132,6 +127,10 @@ const haleoas = stampit()
             return exp.expand(q ||{})
         })
     }
+    /**
+     * @return {Array} of matching relationships from `_links` collection
+     * An empty array is returned if the relationship doesn't exist.
+     * */
     this.links = function(rel) {
         let matches = (links || {})[rel]
         if(!matches) { return [] }
@@ -161,7 +160,7 @@ const haleoas = stampit()
         return P.all(promises)
     }
 
-    //http
+    //http api
     this.post = function(data = {}) {
         const url = this.self
         const req = {
@@ -250,10 +249,19 @@ const haleoas = stampit()
     }
     /**
      * http://tools.ietf.org/html/rfc6902
+     * @param {Object} [to] optionally pass the patch data to use for diff
+     * When this argument is included, it will diff the current state of the
+     * resource against that patch shape.
+     * Otherwise, it will diff against the _original_ body and the current state
+     * of the resource.
      * */
-    this.patch  = function(to = {}) {
+    this.patch  = function(to) {
         const url = this.self
-        let patch = diff(body || {},to)
+        let serialized = this.toJSON({ _links: false, _embedded: false})
+        let dest = (to || serialized)
+        let src = (to ? serialized : body)
+        let patch = diff( src, dest )
+
         let req = {
             credentials: 'include'
             , method: 'PATCH'

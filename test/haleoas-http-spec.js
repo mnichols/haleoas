@@ -359,3 +359,63 @@ test('PATCH works (RFC6902) and refetches the resource', (assert) => {
     })
     .then(fetchMock.restore.bind(fetchMock))
 })
+test('PATCH uses current state against original (RFC6902) and refetches the resource', (assert) => {
+    let self = { href: 'http://a.com/orders/1' }
+    let body = {
+        _links: { self}
+        , foo: 'bar'
+        , deep: {
+            thoughts: 'jack'
+        }
+    }
+    let matcher = function(url, opts) {
+        let {body} = opts
+        console.log('opts',opts.body);
+        let patches = [ {
+            op: 'replace', path: '/deep/thoughts', value: 'jazz'
+        }, {
+            op: 'replace', path: '/foo', value: 'baz'
+        } ]
+
+        let {'content-type':contentType} = opts.headers
+        return url === self.href &&
+            deepEqual(patches, body) &&
+            contentType === 'application/json-patch+json'
+    }
+
+    fetchMock.mock(matcher, 'PATCH', {
+        headers: {
+            'content-type': 'application/hal+json'
+        }
+        ,status: 204
+    })
+    .mock(self.href, 'GET', {
+        headers: {
+            'content-type': 'application/hal+json'
+        }
+        , body: {
+            _links: {
+                self
+            }
+            , foo: 'baz'
+            , deep: { thoughts: 'jazz' }
+        }
+        ,status: 200
+    })
+
+    let sut = hal({
+        self: self.href
+        , fetch
+        , body
+    })
+    sut.foo = 'baz'
+    sut.deep = { thoughts: 'jazz'}
+    return sut.patch()
+    .then(({response, resource}) => {
+        assert.equal(response.status,200)
+        assert.equal(resource.self,self.href)
+        assert.equal(resource.foo, 'baz')
+        assert.equal(resource.deep.thoughts, 'jazz')
+    })
+    .then(fetchMock.restore.bind(fetchMock))
+})
