@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width" charset="utf-8">
+    <title>mr-doc</title>
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/cayman.min.css">
+    <link rel="stylesheet" href="css/prism.min.css">
+    <link rel="stylesheet" href="css/index.min.css">
+    <link rel="stylesheet" href="css/docs.min.css">
+    <link rel="stylesheet" href="css/bootstrap-responsive.min.css">
+  </head>
+  <body data-spy="scroll" data-target=".scrollspy">
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container"><a class="brand">Mr. Doc</a>
+          <div class="nav-collapse collapse">
+            <ul class="nav pull-right sponsored"></ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <header id="overview" class="jumbotron subhead">
+      <div class="container">
+        <h1>mr-doc</h1>
+        <p class="lead"></p>
+      </div>
+    </header>
+    <div class="container">
+      <div class="row">
+        <div class="span3 bs-docs-sidebar">
+          <ul class="nav nav-list bs-docs-sidenav affix-top">
+            <li><a href="index.html">Main</a></li>
+            <li class="active"><a href="haleoas.js.html">haleoas.js</a></li>
+          </ul>
+          <div class="scrollspy">
+            <ul class="nav nav-list bs-docs-sidenav affix-top">
+              <li><a href="#toJSON"><i class="alert alert-info"></i><span>toJSON</span></a>
+              </li>
+              <li><a href="#parse"><i class="alert alert-info"></i><span>parse</span></a>
+              </li>
+              <li><a href="#expand"><i class="alert alert-info"></i><span>expand</span></a>
+              </li>
+              <li><a href="#links"><i class="alert alert-info"></i><span>links</span></a>
+              </li>
+              <li><a href="#allow"><i class="alert alert-info"></i><span>allow</span></a>
+              </li>
+              <li><a href="#get"><i class="alert alert-info"></i><span>get</span></a>
+              </li>
+              <li><a href="#delete"><i class="alert alert-info"></i><span>delete</span></a>
+              </li>
+              <li><a href="#patch"><i class="alert alert-info"></i><span>patch</span></a>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="span9">
+          <section id="toJSON">
+            <h1>toJSON</h1>
+            <h5 class="subheader"></h5>
+            <p>
+              <div class="label label-info radius ctx-type">method</div><span>&nbsp;</span><span>this.toJSON()</span><span>&nbsp;</span>
+            </p>
+          </section>
+          <div class="description"><p>serialize this resource to JSON.<br />Optionally include <code>{ _links: false }</code> or <code>{ _embedded: false }</code><br />to suppress the inclusion of these attributes in the result.<br />They both default to <code>true</code>.</p></div>
+          <pre><code class="language-javascript">this.toJSON = function({_links,_embedded} = {}) {
+    //properties (not methods) only
+    let copy = Object.keys(this)
+    .filter((key) =&gt; {
+        return typeof this[key] !== 'function'
+    })
+    .reduce((obj,key)=&gt; {
+        obj[key] = this[key]
+        return obj
+    }, {})
+
+    //reconstruct
+    let result = copy
+    ;(delete result.self)
+    if(typeof _links === 'undefined' || !!_links ) {
+        result._links = Object.assign({},links)
+    }
+    if(typeof _embedded === 'undefined' || !!_embedded ) {
+        result._embedded = Object.assign({},embedded)
+    }
+    return result
+}</code></pre>
+          <section id="parse">
+            <h1>parse</h1>
+            <h5 class="subheader"></h5>
+            <p>
+              <div class="label label-info radius ctx-type">method</div><span>&nbsp;</span><span>this.parse()</span><span>&nbsp;</span>
+            </p>
+          </section>
+          <div class="description"><p>parse a JSON object to hydrate this instance</p></div>
+          <pre><code class="language-javascript">this.parse = function(_body){
+    parse(_body)
+    return this
+}</code></pre>
+          <section id="expand">
+            <h1>expand</h1>
+            <h5 class="subheader"></h5>
+            <p>
+              <div class="label label-info radius ctx-type">method</div><span>&nbsp;</span><span>this.expand()</span><span>&nbsp;</span>
+            </p>
+          </section>
+          <div class="description"><p><a href="http://tools.ietf.org/html/rfc6570">http://tools.ietf.org/html/rfc6570</a></p></div>
+          <pre><code class="language-javascript">this.expand = function(link, params) {
+    //only arrays
+    params = [].concat(params)
+    let exp = urlTemplate.parse(link.href || link)
+    return params.map((q)=&gt; {
+        return exp.expand(q ||{})
+    })
+}</code></pre>
+          <section id="links">
+            <h1>links</h1>
+            <h5 class="subheader"></h5>
+            <p>
+              <div class="label label-info radius ctx-type">method</div><span>&nbsp;</span><span>this.links()</span><span>&nbsp;</span>
+            </p>
+          </section>
+          <div class="description"></div>
+          <pre><code class="language-javascript">this.links = function(rel) {
+    let matches = (links || {})[rel]
+    if(!matches) { return [] }
+    let result = [].concat(matches)
+    return result
+}</code></pre>
+          <section id="allow">
+            <h1>allow</h1>
+            <h5 class="subheader"></h5>
+            <p>
+              <div class="label label-info radius ctx-type">method</div><span>&nbsp;</span><span>this.allow()</span><span>&nbsp;</span>
+            </p>
+          </section>
+          <div class="description"><p>what methods are ALLOWed?<br />getter/setter (Array) of HTTP methods</p></div>
+          <pre><code class="language-javascript">this.allow = function(methods) {
+    if(methods) { allow = methods }
+    return allow
+}
+
+this.follow = function(rel) {
+    let lnks = this.links(rel)
+    if(!lnks.length) {
+        throw new Error(`${this.self} not related with '${rel}'`)
+    }
+    //allow non-global Promise
+    let P = (this.Promise || Promise)
+    let promises = lnks.map((lnk) =&gt; {
+        return haleoas({ self: lnk.href, fetch: this.fetch }).get()
+    })
+    return P.all(promises)
+}
+
+//http api
+this.post = function(data = {}) {
+    const url = this.self
+    const req = {
+        credentials: 'include'
+        , method: 'POST'
+        , headers: {
+            'accept': MIME
+            ,'content-type': MIME
+        }
+        , body: JSON.stringify(data)
+    }
+    return this.fetch(url, req)
+    .then((response) =&gt; {
+        let location = response.headers.get('location')
+        if(location) {
+            return sync(location)
+        }
+        //allow non-global Promise
+        let P = (this.Promise || Promise)
+        return P.resolve(response)
+        .then(bodyHandler(req.method))
+        .then(headerHandler(req.method))
+        .then(respond(req.method))
+    })
+}
+
+this.put = function() {
+    const url = this.self
+    let serialized = this.toJSON()
+    //dont include _links
+    ;(delete serialized._links)
+    const req = {
+        credentials: 'include'
+        , method: 'PUT'
+        , headers: {
+            'accept': MIME
+            ,'content-type': 'application/json'
+        }
+        , body: JSON.stringify(serialized)
+    }
+    return this.fetch(url, req)
+    .then(headerHandler(req.method))
+    .then(sync.bind(this,this.self))
+}</code></pre>
+          <section id="get">
+            <h1>get</h1>
+            <h5 class="subheader"></h5>
+            <p>
+              <div class="label label-info radius ctx-type">method</div><span>&nbsp;</span><span>this.get()</span><span>&nbsp;</span>
+            </p>
+          </section>
+          <table class="table table-bordered table-striped">
+            <thead>
+              <tr>
+                <th style="width:20%">Option name</th>
+                <th style="width:20%">Type</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>[params]</td>
+                <td>Object</td>
+                <td><p>optionally provide params for <code>self</code> having a url templated in conformance to <a href="http://tools.ietf.org/html/rfc6570">RFC6570</a>.</p></td>
+              </tr>
+              <tr>
+                <td>return</td>
+                <td>Promise</td>
+                <td><p>resolving an object having the <code>Response</code> and this instance (<code>resource</code>) , but hydrated with payload from response<br /><strong>Note</strong> that <code>content-type</code> other than <code>application/hal+json</code> will not throw an error<br />and this instance will remain untouched.</p></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="description"></div>
+          <pre><code class="language-javascript">this.get = function(params) {
+    let url = this.self
+    if(params) {
+        url  = this.expand(url,params)[0]
+    }
+    const req = {
+        credentials: 'include'
+        , method: 'GET'
+        , headers: {
+            'accept': MIME
+            ,'content-type': MIME
+        }
+        //https://groups.yahoo.com/neo/groups/rest-discuss/conversations/messages/9962
+        , body: undefined
+    }
+    return this.fetch(url, req)
+    .then(bodyHandler(req.method))
+    .then(headerHandler(req.method))
+    .then(correctSelf)
+    .then(respond(req.method))
+}</code></pre>
+          <section id="delete">
+            <h1>delete</h1>
+            <h5 class="subheader"></h5>
+            <p>
+              <div class="label label-info radius ctx-type">method</div><span>&nbsp;</span><span>this.delete()</span><span>&nbsp;</span>
+            </p>
+          </section>
+          <div class="description"><p><a href="http://tools.ietf.org/html/rfc2616#section-9.7">http://tools.ietf.org/html/rfc2616#section-9.7</a></p></div>
+          <pre><code class="language-javascript">this.delete = function() {
+    const url = this.self
+    const req = {
+        credentials: 'include'
+        , method: 'DELETE'
+        , headers: {
+            'accept': MIME
+            ,'content-type': MIME
+        }
+    }
+    return this.fetch(url, req)
+    .then(headerHandler(req.method))
+    //@TODO handle 200
+    //by parsing to a HAL status entity
+    //and return that?
+    .then(respond(req.method))
+}</code></pre>
+          <section id="patch">
+            <h1>patch</h1>
+            <h5 class="subheader"></h5>
+            <p>
+              <div class="label label-info radius ctx-type">method</div><span>&nbsp;</span><span>this.patch()</span><span>&nbsp;</span>
+            </p>
+          </section>
+          <table class="table table-bordered table-striped">
+            <thead>
+              <tr>
+                <th style="width:20%">Option name</th>
+                <th style="width:20%">Type</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>[to]</td>
+                <td>Object</td>
+                <td><p>optionally pass the patch data to use for diff When this argument is included, it will diff the current state of the<br />resource against that patch shape.<br />Otherwise, it will diff against the <em>original</em> body and the current state<br />of the resource.</p></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="description"><p><a href="http://tools.ietf.org/html/rfc6902">http://tools.ietf.org/html/rfc6902</a></p></div>
+          <pre><code class="language-javascript">this.patch  = function(to) {
+    const url = this.self
+    let serialized = this.toJSON({ _links: false, _embedded: false})
+    let dest = (to || serialized)
+    let src = (to ? serialized : body)
+    let patch = diff( src, dest )
+
+    let req = {
+        credentials: 'include'
+        , method: 'PATCH'
+        , headers: {
+            'accept': MIME
+            ,'content-type': 'application/json-patch+json'
+        }
+        , body: patch
+    }
+    return this.fetch(url, req)
+    .then(headerHandler(req.method))
+    .then(sync.bind(this,this.self))
+}
+
+this.options = function() {
+    let url = this.self
+    let req = {
+        credentials: 'include'
+        , method: 'OPTIONS'
+        , headers: {}
+        , body: undefined
+    }
+    return this.fetch(url, req)
+    .then(headerHandler(req.method))
+    .then(respond(req.method))
+}
+this.head = function() {
+    let url = this.self
+    let req = {
+        credentials: 'include'
+        , method: 'HEAD'
+        , headers: { }
+        , body: undefined
+    }
+    return this.fetch(url, req)
+    .then(headerHandler(req.method))
+    .then(respond(req.method))
+}
+
+//preload
+if(this.body) {
+    let copy = this.body
+    ;(delete this.body)
+    parse(copy)
+    correctSelf()
+}
+if(this.self) {
+    //add self link immediately
+    links = { self: { href: this.self} }
+}
+
+})
+export default haleoas</code></pre>
+        </div>
+      </div>
+    </div>
+    <footer class="footer">
+      <div class="container">
+        <p>Documentation generated with <a href="https://github.com/mr-doc/mr-doc">Mr. Doc </a> created by <a href="https://twitter.com/FGRibreau" data-show-count="false" class="twitter-follow-button">Francois-Guillaume Ribreau </a></p>
+        <p>Mr. Doc is sponsored by <a href="http://bringr.net/?btt" title="Outil d'analyse des réseaux sociaux" class="bringr">Bringr </a> and <a href="https://redsmin.com/?btt" title="Full Redis GUI" class="redsmin">Redsmin</a></p>
+        <p>Theme borrowed from Twitter Bootstrap</p>
+      </div>
+    </footer>
+    <script src="js/twitter-widget.min.js"></script>
+    <script src="js/jquery.min.js"></script>
+    <script src="js/bootstrap-transition.min.js"></script>
+    <script src="js/bootstrap-scrollspy.min.js"></script>
+    <script src="js/bootstrap-dropdown.min.js"></script>
+    <script src="js/bootstrap-collapse.min.js"></script>
+    <script src="js/bootstrap-affix.min.js"></script>
+    <script src="js/prism.min.js"></script>
+    <script src="js/index.min.js"></script>
+  </body>
+</html>
