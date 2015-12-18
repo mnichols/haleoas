@@ -5,9 +5,9 @@
   "main": "./dist/haleoas.js",
   "scripts": {
     "clean": "rimraf dist/* && mkdir dist || true",
-    "test": "babel-tape-runner ./test/**/*-spec.js # | faucet",
+    "test": "babel-tape-runner ./test/**/*-spec.js | faucet",
     "build": "npm run clean && babel src --out-dir dist",
-    "docs": "doxx --source src --target docs",
+    "docs": "mr-doc --source src --output docs",
     "gh-pages": "npm run docs && gh-pages -d docs",
     "prepublish": "npm run build && npm test && npm run gh-pages"
   },
@@ -40,10 +40,10 @@
     "blue-tape": "^0.1.10",
     "browser-run": "^2.1.2",
     "deep-equal": "^1.0.1",
-    "doxx": "^2.0.0",
     "faucet": "0.0.1",
     "fetch-mock": "^3.0.3",
     "gh-pages": "^0.4.0",
+    "mr-doc": "^3.0.7",
     "rimraf": "^2.4.3"
   },
   "dependencies": {

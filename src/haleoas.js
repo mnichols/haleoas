@@ -205,6 +205,14 @@ const haleoas = stampit()
         .then(headerHandler(req.method))
         .then(sync.bind(this,this.self))
     }
+    /**
+     * @param {Object} [params] optionally provide params for `self` having a url
+     * templated in conformance to [RFC6570](http://tools.ietf.org/html/rfc6570).
+     * @return {Promise} resolving an object having the `Response` and this instance (`resource`)
+     * , but hydrated with payload from response
+     * **Note** that `content-type` other than `application/hal+json` will not throw an error
+     * and this instance will remain untouched.
+     **/
     this.get = function(params) {
         let url = this.self
         if(params) {
