@@ -4,6 +4,13 @@ import stampit from 'stampit'
 import urlTemplate from 'url-template'
 import diff from 'json-patch-gen'
 
+/**
+ * factory for a resource
+ * @param {Function} fetch the xhr implementation for http. Prefer the [fetch api](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API).
+ * @param {Url} [self] the resource uri
+ * @param {Object} [body] a valid `HAL` representation to seed the resource with
+ * @param {Promise} [Promise] a Promise implementation conforming to [this](https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Promise)
+ * */
 const haleoas = stampit()
 .init(function({instance, stamp}){
     let body,links,embedded, allow = []
@@ -38,19 +45,44 @@ const haleoas = stampit()
             return response
         }
     }
+    const isBodyCandidate = (response) => {
+        let status = response.status
+        return (status > 199 && (status !== 204 && status !== 304))
+    }
+    /**
+     * eg http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.4
+     * @TODO handle `transfer-encoding` header?
+     * **/
     const bodyHandler = (method) => {
         return (response) => {
+            if(!isBodyCandidate(response)) {
+                return response
+            }
             let contentType = response.headers.get('content-type')
+            let contentLength = response.headers.get('content-length')
             if(contentType !== MIME) {
                 let errorMessage = `illegal content type at ${response.url} : ${contentType}`
                 this.logerror(errorMessage)
                 return response
             }
-            return response.json()
-            .then(parse)
-            .then(()=> {
+            //missing header returns `null`
+            if(contentLength != null && contentLength < 1) {
                 return response
-            })
+            }
+            try {
+                return response.json()
+                .then(parse)
+                .then(() => {
+                    return response
+                })
+                .catch((err)=> {
+                    this.logerror(err)
+                    return response
+                })
+            } catch(err) {
+                this.logerror(err)
+                return response
+            }
         }
     }
 
@@ -79,6 +111,9 @@ const haleoas = stampit()
     }
 
     //api
+    /**
+     * Clone this resource
+     * */
     this.clone = () => stamp(instance)
 
     /**
@@ -117,7 +152,11 @@ const haleoas = stampit()
         return this
     }
     /**
-     * http://tools.ietf.org/html/rfc6570
+     * Expand a url conforming to http://tools.ietf.org/html/rfc6570
+     * with the params
+     * @param {Url} url http://tools.ietf.org/html/rfc6570
+     * @param {Object} params parameters to expand in the url
+     * @return {Url} the expanded url
      * */
     this.expand = function(link, params) {
         //only arrays
@@ -128,6 +167,7 @@ const haleoas = stampit()
         })
     }
     /**
+     * @param {String} rel retrieve the list of links by relationship
      * @return {Array} of matching relationships from `_links` collection
      * An empty array is returned if the relationship doesn't exist.
      * */
@@ -140,6 +180,7 @@ const haleoas = stampit()
     /**
      * what methods are ALLOWed?
      * getter/setter (Array) of HTTP methods
+     * @param {Array} [methods] Array of valid method names
      * @return {Array} of HTTP methods retrieved by `ALLOW` response header
      * */
     this.allow = function(methods) {
@@ -147,6 +188,12 @@ const haleoas = stampit()
         return allow
     }
 
+    /**
+     * Follows the relation(s) at `rel`
+     * @param {String} rel The relationship to traverse
+     * @return {Promise} resolving an Array of {resource,response} objects
+     * for each link.
+     * **/
     this.follow = function(rel) {
         let lnks = this.links(rel)
         if(!lnks.length) {
@@ -161,6 +208,14 @@ const haleoas = stampit()
     }
 
     //http api
+    /**
+     * Issues a `POST` request against this resource
+     * Follows up with a `GET` right away if a `Location` header is present, as in
+     * a `201 Created` response.
+     * @param {Object} data optional body content to send
+     * @return {Promise} the {resource,response} object of either the new resource
+     * (when a `Location` header is present in response) or the current instance.
+     * **/
     this.post = function(data = {}) {
         const url = this.self
         const req = {
@@ -187,6 +242,11 @@ const haleoas = stampit()
         })
     }
 
+    /**
+     * Issues a `PUT` request against this resource
+     * Follows up with a `GET` right away to resync this resource.
+     * @return {Promise} resolving to a {request,response} object for a new instance of this resource
+     * **/
     this.put = function() {
         const url = this.self
         let serialized = this.toJSON()
@@ -236,8 +296,10 @@ const haleoas = stampit()
     }
 
     /**
+     * Issues a `DELETE` request against this resource
      * http://tools.ietf.org/html/rfc2616#section-9.7
-     * */
+     * @return {Promise} the {resource,response} object of this resource
+     * **/
     this.delete = function() {
         const url = this.self
         const req = {
@@ -256,12 +318,15 @@ const haleoas = stampit()
         .then(respond(req.method))
     }
     /**
+     * Issues a `PATCH` request against this resource
      * http://tools.ietf.org/html/rfc6902
      * @param {Object} [to] optionally pass the patch data to use for diff
      * When this argument is included, it will diff the current state of the
      * resource against that patch shape.
      * Otherwise, it will diff against the _original_ body and the current state
      * of the resource.
+     * It will immediately issue an `GET` request to resync from the server.
+     * @return {Promise} resolving to a {request,response} object for a new instance of this resource
      * */
     this.patch  = function(to) {
         const url = this.self
@@ -276,6 +341,7 @@ const haleoas = stampit()
             , headers: {
                 'accept': MIME
                 ,'content-type': 'application/json-patch+json'
+                , 'version': 'http/1.1'
             }
             , body: patch
             , mode: 'cors'
@@ -285,6 +351,10 @@ const haleoas = stampit()
         .then(sync.bind(this,this.self))
     }
 
+    /**
+     * Issues a `OPTIONS` request against this resource
+     * @return {Promise} resolving an object having the `Response` and this instance (`resource`)
+     **/
     this.options = function() {
         let url = this.self
         let req = {
@@ -297,6 +367,10 @@ const haleoas = stampit()
         .then(headerHandler(req.method))
         .then(respond(req.method))
     }
+    /**
+     * Issues a `HEAD` request against this resource
+     * @return {Promise} resolving an object having the `Response` and this instance (`resource`)
+     **/
     this.head = function() {
         let url = this.self
         let req = {

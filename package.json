@@ -1,6 +1,6 @@
 {
   "name": "haleoas",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "HAL client",
   "main": "./dist/haleoas.js",
   "scripts": {
@@ -9,7 +9,8 @@
     "build": "npm run clean && babel src --out-dir dist",
     "docs": "mr-doc --source src --output docs --name haleoas",
     "gh-pages": "npm run docs && gh-pages -d docs",
-    "prepublish": "npm run build && npm test && npm run gh-pages"
+    "prepublish": "npm run build && npm test && npm run gh-pages",
+    "serve": "serve"
   },
   "babel": {
     "presets": [
@@ -45,7 +46,8 @@
     "gh-pages": "^0.4.0",
     "jspm": "^0.16.19",
     "mr-doc": "^3.0.7",
-    "rimraf": "^2.4.3"
+    "rimraf": "^2.4.3",
+    "serve": "^1.4.0"
   },
   "dependencies": {
     "cuid": "^1.2.5",

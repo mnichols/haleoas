@@ -6,12 +6,18 @@ import fetchMock from 'fetch-mock'
 import deepEqual from 'deep-equal'
 import 'isomorphic-fetch'
 
+
+const getOrigin = () => {
+    if(typeof window !== 'undefined' ) { return window.location.origin}
+    return 'http://example.com'
+}
+const origin = getOrigin()
 const A = () => {
-    let self = 'http://a.com/a'
+    let self = `${origin}/a`
     let body =  {
         _links: {
             self: { href: self }
-            , 'co:b': { href: 'http://a.com/b'}
+            , 'co:b': { href: `${origin}/b`}
         }
         , name: 'A'
     }
@@ -19,11 +25,11 @@ const A = () => {
 }
 
 const B = () => {
-    let self= 'http://a.com/b'
+    let self= `${origin}/b`
     let body =  {
         _links: {
             self: { href: self }
-            , 'co:a': { href: 'http://a.com/a'}
+            , 'co:a': { href: `${origin}/a`}
         }
         , name: 'B'
     }
@@ -34,11 +40,17 @@ test('following a single relationship works',(assert) => {
     let res2 = B()
     fetchMock.mock(res1.self,'GET',{
         body: res1.body
-        , headers: { 'content-type':'application/hal+json' }
+        , headers: {
+            'content-type':'application/hal+json'
+            , 'content-length': JSON.stringify(res1.body).length
+        }
     })
     fetchMock.mock(res2.self,'GET',{
         body: res2.body
-        , headers: { 'content-type':'application/hal+json' }
+        , headers: {
+            'content-type':'application/hal+json'
+            , 'content-length': JSON.stringify(res2.body).length
+        }
     })
     let sut = hal({self: res1.self, fetch})
     return sut.get()

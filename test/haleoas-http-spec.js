@@ -7,7 +7,7 @@ import deepEqual from 'deep-equal'
 import 'isomorphic-fetch'
 
 const getOrigin = () => {
-    if(window) { return window.location.origin}
+    if(typeof window !== 'undefined' ) { return window.location.origin}
     return 'http://example.com'
 }
 const origin = getOrigin()
@@ -62,10 +62,11 @@ const fullyLoaded = () => {
 }
 
 test('invalid content-type doesnt throw',(assert) => {
-    fetchMock.mock(`${origin}/orders`,'GET', {
+    fetchMock.mock(`${origin}/orders`,'get', {
         body: 'plain'
         ,headers: {
             'content-type': 'text/plain'
+            , 'content-length': 5
         }
         ,status: 200
     })
@@ -82,9 +83,10 @@ test('invalid content-type doesnt throw',(assert) => {
 })
 test('simple HEAD works',(assert) => {
     let self = { href: `${origin}/orders`}
-    fetchMock.mock(self.href, 'HEAD', {
+    fetchMock.mock(self.href, 'head', {
         headers: {
             'content-type': 'application/hal+json'
+            , 'content-length': 0
             , 'allow': 'GET,PUT,POST,DELETE'
         }
         ,status: 204
@@ -102,9 +104,10 @@ test('simple HEAD works',(assert) => {
 })
 test('simple OPTIONS works',(assert) => {
     let self = { href: `${origin}/orders`}
-    fetchMock.mock(self.href, 'OPTIONS', {
+    fetchMock.mock(self.href, 'options', {
         headers: {
             'content-type': 'application/hal+json'
+            , 'content-length': 0
             , 'allow': 'GET,PUT,POST,DELETE'
         }
         ,status: 204
@@ -126,10 +129,11 @@ test('simple GET works',(assert) => {
         let {accept} = opts.headers
         return accept === 'application/hal+json' && url === `${origin}/orders`
     }
-    fetchMock.mock(matcher, 'GET', {
+    fetchMock.mock(matcher, 'get', {
         body
         ,headers: {
             'content-type': 'application/hal+json'
+            , 'content-length': JSON.stringify(body).length
         }
         ,status: 200
     })
@@ -146,10 +150,11 @@ test('simple GET works',(assert) => {
 
 test('GET with RFC6570 params works',(assert) => {
     let body = fullyLoaded()
-    fetchMock.mock(`${origin}/orders?page=2&size=10`, 'GET', {
+    fetchMock.mock(`${origin}/orders?page=2&size=10`, 'get', {
         body
         ,headers: {
             'content-type': 'application/hal+json'
+            , 'content-length': JSON.stringify(body).length
         }
         ,status: 200
     })
@@ -165,10 +170,11 @@ test('GET with RFC6570 params works',(assert) => {
 })
 
 test('GET with http errors dont fail',(assert) => {
-    fetchMock.mock(`${origin}/orders`, 'GET', {
+    fetchMock.mock(`${origin}/orders`, 'get', {
         body: 'You suck'
         ,headers: {
             'content-type': 'text/plain'
+            , 'content-length': 8
         }
         ,status: 400
         , statusText: 'Bad Request'
@@ -192,10 +198,11 @@ test('simple POST works',(assert) => {
             url === `${origin}/orders` &&
             body === JSON.stringify({foo:'bar'})
     }
-    fetchMock.mock(matcher, 'POST', {
+    fetchMock.mock(matcher, 'post', {
         body: null
         , headers: {
             'content-type': 'application/hal+json'
+            , 'content-length': 0
         }
         ,status: 204
     })
@@ -219,21 +226,24 @@ test('POST resulting in location follows created entity',(assert) => {
             url === `${origin}/orders` &&
             body === JSON.stringify({foo:'bar'})
     }
-    fetchMock.mock(matcher, 'POST', {
+    fetchMock.mock(matcher, 'post', {
         headers: {
             'content-type': 'application/hal+json'
+            , 'content-length': 0
             , location: `${origin}/orders/1`
         }
         ,status: 201
         , body: null
     })
-    fetchMock.mock(`${origin}/orders/1`, 'GET', {
-        body: {
-            _links: { self: { href: `${origin}/orders/1` }}
-            , bar: 'foo'
-        }
+    let newBody = {
+        _links: { self: { href: `${origin}/orders/1` }}
+        , bar: 'foo'
+    }
+    fetchMock.mock(`${origin}/orders/1`, 'get', {
+        body: newBody
         , headers: {
             'content-type': 'application/hal+json'
+            , 'content-length': JSON.stringify(newBody).length
         }
         ,status: 200
     })
@@ -249,9 +259,10 @@ test('POST resulting in location follows created entity',(assert) => {
     .then(fetchMock.restore.bind(fetchMock))
 })
 test('DELETE works',(assert) => {
-    fetchMock.mock(`${origin}/orders`, 'DELETE', {
+    fetchMock.mock(`${origin}/orders`, 'delete', {
         headers: {
             'content-type': 'application/hal+json'
+            , 'content-length': 0
         }
         ,status: 204
         , body: null
@@ -281,15 +292,16 @@ test('PUT resulting sends full body and syncs',(assert) => {
             url === self.href &&
             deepEqual(JSON.parse(opts.body), expectBody)
     }
-    fetchMock.mock(matcher, 'PUT', {
-        headers: { }
+    fetchMock.mock(matcher, 'put', {
+        headers: { 'content-length': 0 }
         ,status: 204
         , body: null
     })
-    fetchMock.mock(self.href, 'GET', {
+    fetchMock.mock(self.href, 'get', {
         body: bodyAfter
         , headers: {
             'content-type': 'application/hal+json'
+            , 'content-length': JSON.stringify(bodyAfter).length
         }
         ,status: 200
     })
@@ -335,9 +347,17 @@ test('PATCH works (RFC6902) and refetches the resource', (assert) => {
             contentType === 'application/json-patch+json'
     }
 
-    fetchMock.mock(matcher, 'PATCH', {
+    let responseBody = {
+        _links: {
+            self
+        }
+        , foo: 'baz'
+        , deep: { thoughts: 'jazz' }
+    }
+    fetchMock.mock(matcher, 'patch', {
         headers: {
             'content-type': 'application/hal+json'
+            ,'content-length': 0
         }
         ,status: 204
         , body: null
@@ -345,14 +365,9 @@ test('PATCH works (RFC6902) and refetches the resource', (assert) => {
     .mock(self.href, 'GET', {
         headers: {
             'content-type': 'application/hal+json'
+            , 'content-length': JSON.stringify(responseBody).length
         }
-        , body: {
-            _links: {
-                self
-            }
-            , foo: 'baz'
-            , deep: { thoughts: 'jazz' }
-        }
+        , body: responseBody
         ,status: 200
     })
 
@@ -394,9 +409,18 @@ test('PATCH uses current state against original (RFC6902) and refetches the reso
             contentType === 'application/json-patch+json'
     }
 
-    fetchMock.mock(matcher, 'PATCH', {
+    let responseBody = {
+        _links: {
+            self
+        }
+        , foo: 'baz'
+        , deep: { thoughts: 'jazz' }
+    }
+
+    fetchMock.mock(matcher, 'patch', {
         headers: {
             'content-type': 'application/hal+json'
+            , 'content-length': 0
         }
         ,status: 204
         , body: null
@@ -404,14 +428,9 @@ test('PATCH uses current state against original (RFC6902) and refetches the reso
     .mock(self.href, 'GET', {
         headers: {
             'content-type': 'application/hal+json'
+            , 'content-length': JSON.stringify(responseBody).length
         }
-        , body: {
-            _links: {
-                self
-            }
-            , foo: 'baz'
-            , deep: { thoughts: 'jazz' }
-        }
+        , body: responseBody
         ,status: 200
     })
 

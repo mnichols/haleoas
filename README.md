@@ -13,3 +13,22 @@ Supported HTTP Methods:
 * `DELETE`
 
 
+### Browser support
+
+When running browser tests, a modern web server is expected ^1.1.
+
+* Safari borks by babel-core because of [this silliness](https://github.com/thlorenz/convert-source-map/issues/31)
+
+### Running tests
+
+**NodeJS**
+`npm test`
+
+**Browser**
+
+`npm serve`
+
+In your browser, visit `http://localhost:3000/test-runner.html` and look in the console.
+
+
+
