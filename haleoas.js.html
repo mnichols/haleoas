@@ -35,6 +35,12 @@
           </ul>
           <div class="scrollspy">
             <ul class="nav nav-list bs-docs-sidenav affix-top">
+              <li><a href="#haleoas"><i class="alert alert-success"></i><span>haleoas</span></a>
+              </li>
+              <li><a href="#bodyHandler"><i class="alert alert-success"></i><span>bodyHandler</span></a>
+              </li>
+              <li><a href="#clone"><i class="alert alert-success"></i><span>clone</span></a>
+              </li>
               <li><a href="#toJSON"><i class="alert alert-info"></i><span>toJSON</span></a>
               </li>
               <li><a href="#parse"><i class="alert alert-info"></i><span>parse</span></a>
@@ -45,16 +51,178 @@
               </li>
               <li><a href="#allow"><i class="alert alert-info"></i><span>allow</span></a>
               </li>
+              <li><a href="#follow"><i class="alert alert-info"></i><span>follow</span></a>
+              </li>
+              <li><a href="#post"><i class="alert alert-info"></i><span>post</span></a>
+              </li>
+              <li><a href="#put"><i class="alert alert-info"></i><span>put</span></a>
+              </li>
               <li><a href="#get"><i class="alert alert-info"></i><span>get</span></a>
               </li>
               <li><a href="#delete"><i class="alert alert-info"></i><span>delete</span></a>
               </li>
               <li><a href="#patch"><i class="alert alert-info"></i><span>patch</span></a>
               </li>
+              <li><a href="#options"><i class="alert alert-info"></i><span>options</span></a>
+              </li>
+              <li><a href="#head"><i class="alert alert-info"></i><span>head</span></a>
+              </li>
             </ul>
           </div>
         </div>
         <div class="span9">
+          <section id="haleoas">
+            <h1>haleoas</h1>
+            <h5 class="subheader"></h5>
+            <p>
+              <div class="label label-success radius ctx-type">declaration</div><span>&nbsp;</span><span>haleoas</span><span>&nbsp;</span>
+            </p>
+          </section>
+          <table class="table table-bordered table-striped">
+            <thead>
+              <tr>
+                <th style="width:20%">Option name</th>
+                <th style="width:20%">Type</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>fetch</td>
+                <td>Function</td>
+                <td><p>the xhr implementation for http. Prefer the <a href="https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API">fetch api</a>.</p></td>
+              </tr>
+              <tr>
+                <td>[self]</td>
+                <td>Url</td>
+                <td><p>the resource uri</p></td>
+              </tr>
+              <tr>
+                <td>[body]</td>
+                <td>Object</td>
+                <td><p>a valid <code>HAL</code> representation to seed the resource with</p></td>
+              </tr>
+              <tr>
+                <td>[Promise]</td>
+                <td>Promise</td>
+                <td><p>a Promise implementation conforming to <a href="https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Promise">this</a></p></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="description"><p>factory for a resource</p></div>
+          <pre><code class="language-javascript">const haleoas = stampit()
+.init(function({instance, stamp}){
+    let body,links,embedded, allow = []
+    this.logerror = (this.logerror || this.log || console.error.bind(console))
+    this.log = (this.log || console.log.bind(console))
+
+    const MIME = 'application/hal+json'
+
+    const correctSelf = (ignore) =&gt; {
+        let linkSelf = this.links('self')
+        if(linkSelf &amp;&amp; linkSelf[0]) {
+            this.self = linkSelf[0].href
+        }
+        return ignore
+    }
+    const parse = (json = {}) =&gt; {
+        let copy = Object.assign({},json)
+        ;({_links:links,_embedded:embedded} = copy)
+        ;(delete copy._links)
+        ;(delete copy._embedded)
+        body = copy
+        //merge body values onto `this`
+        Object.assign(this,copy)
+        return json
+    }
+    const headerHandler = (method) =&gt; {
+        return (response) =&gt; {
+            let allows = response.headers.get('allow')
+            if(allows) {
+                this.allow(allows.split(','))
+            }
+            return response
+        }
+    }
+    const isBodyCandidate = (response) =&gt; {
+        let status = response.status
+        return (status &gt; 199 &amp;&amp; (status !== 204 &amp;&amp; status !== 304))
+    }</code></pre>
+          <section id="bodyHandler">
+            <h1>bodyHandler</h1>
+            <h5 class="subheader"></h5>
+            <p>
+              <div class="label label-success radius ctx-type">declaration</div><span>&nbsp;</span><span>bodyHandler</span><span>&nbsp;</span>
+            </p>
+          </section>
+          <div class="description"><p>eg <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.4">http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.4</a></p></div>
+          <pre><code class="language-javascript">const bodyHandler = (method) =&gt; {
+    return (response) =&gt; {
+        if(!isBodyCandidate(response)) {
+            return response
+        }
+        let contentType = response.headers.get('content-type')
+        let contentLength = response.headers.get('content-length')
+        if(contentType !== MIME) {
+            let errorMessage = `illegal content type at ${response.url} : ${contentType}`
+            this.logerror(errorMessage)
+            return response
+        }
+        //missing header returns `null`
+        if(contentLength != null &amp;&amp; contentLength &lt; 1) {
+            return response
+        }
+        try {
+            return response.json()
+            .then(parse)
+            .then(() =&gt; {
+                return response
+            })
+            .catch((err)=&gt; {
+                this.logerror(err)
+                return response
+            })
+        } catch(err) {
+            this.logerror(err)
+            return response
+        }
+    }
+}
+
+const respond = (method) =&gt; {
+    return (response) =&gt; {
+        return {
+            resource: this
+            , response
+        }
+    }
+}
+
+const sync = (self) =&gt; {
+    return haleoas({
+        self
+        , fetch: this.fetch
+    }).get()
+}
+
+const stringifyReplacer = (key, value) =&gt; {
+    if(key === '_links') {
+        //do not include in serialization
+        return undefined
+    }
+    return value
+}
+
+//api</code></pre>
+          <section id="clone">
+            <h1>clone</h1>
+            <h5 class="subheader"></h5>
+            <p>
+              <div class="label label-success radius ctx-type">property</div><span>&nbsp;</span><span>this.clone</span><span>&nbsp;</span>
+            </p>
+          </section>
+          <div class="description"><p>Clone this resource</p></div>
+          <pre><code class="language-javascript">this.clone = () =&gt; stamp(instance)</code></pre>
           <section id="toJSON">
             <h1>toJSON</h1>
             <h5 class="subheader"></h5>
@@ -104,7 +272,33 @@
               <div class="label label-info radius ctx-type">method</div><span>&nbsp;</span><span>this.expand()</span><span>&nbsp;</span>
             </p>
           </section>
-          <div class="description"><p><a href="http://tools.ietf.org/html/rfc6570">http://tools.ietf.org/html/rfc6570</a></p></div>
+          <table class="table table-bordered table-striped">
+            <thead>
+              <tr>
+                <th style="width:20%">Option name</th>
+                <th style="width:20%">Type</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>url</td>
+                <td>Url</td>
+                <td><p><a href="http://tools.ietf.org/html/rfc6570">http://tools.ietf.org/html/rfc6570</a></p></td>
+              </tr>
+              <tr>
+                <td>params</td>
+                <td>Object</td>
+                <td><p>parameters to expand in the url</p></td>
+              </tr>
+              <tr>
+                <td>return</td>
+                <td>Url</td>
+                <td><p>the expanded url</p></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="description"><p>Expand a url conforming to <a href="http://tools.ietf.org/html/rfc6570">http://tools.ietf.org/html/rfc6570</a><br />with the params</p></div>
           <pre><code class="language-javascript">this.expand = function(link, params) {
     //only arrays
     params = [].concat(params)
@@ -120,6 +314,27 @@
               <div class="label label-info radius ctx-type">method</div><span>&nbsp;</span><span>this.links()</span><span>&nbsp;</span>
             </p>
           </section>
+          <table class="table table-bordered table-striped">
+            <thead>
+              <tr>
+                <th style="width:20%">Option name</th>
+                <th style="width:20%">Type</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>rel</td>
+                <td>String</td>
+                <td><p>retrieve the list of links by relationship</p></td>
+              </tr>
+              <tr>
+                <td>return</td>
+                <td>Array</td>
+                <td><p>of matching relationships from <code>_links</code> collection An empty array is returned if the relationship doesn&#39;t exist.</p></td>
+              </tr>
+            </tbody>
+          </table>
           <div class="description"></div>
           <pre><code class="language-javascript">this.links = function(rel) {
     let matches = (links || {})[rel]
@@ -134,13 +349,62 @@
               <div class="label label-info radius ctx-type">method</div><span>&nbsp;</span><span>this.allow()</span><span>&nbsp;</span>
             </p>
           </section>
+          <table class="table table-bordered table-striped">
+            <thead>
+              <tr>
+                <th style="width:20%">Option name</th>
+                <th style="width:20%">Type</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>[methods]</td>
+                <td>Array</td>
+                <td><p>Array of valid method names</p></td>
+              </tr>
+              <tr>
+                <td>return</td>
+                <td>Array</td>
+                <td><p>of HTTP methods retrieved by <code>ALLOW</code> response header</p></td>
+              </tr>
+            </tbody>
+          </table>
           <div class="description"><p>what methods are ALLOWed?<br />getter/setter (Array) of HTTP methods</p></div>
           <pre><code class="language-javascript">this.allow = function(methods) {
     if(methods) { allow = methods }
     return allow
-}
-
-this.follow = function(rel) {
+}</code></pre>
+          <section id="follow">
+            <h1>follow</h1>
+            <h5 class="subheader"></h5>
+            <p>
+              <div class="label label-info radius ctx-type">method</div><span>&nbsp;</span><span>this.follow()</span><span>&nbsp;</span>
+            </p>
+          </section>
+          <table class="table table-bordered table-striped">
+            <thead>
+              <tr>
+                <th style="width:20%">Option name</th>
+                <th style="width:20%">Type</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>rel</td>
+                <td>String</td>
+                <td><p>The relationship to traverse</p></td>
+              </tr>
+              <tr>
+                <td>return</td>
+                <td>Promise</td>
+                <td><p>resolving an Array of {resource,response} objects for each link.<br />*</p></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="description"><p>Follows the relation(s) at <code>rel</code></p></div>
+          <pre><code class="language-javascript">this.follow = function(rel) {
     let lnks = this.links(rel)
     if(!lnks.length) {
         throw new Error(`${this.self} not related with '${rel}'`)
@@ -153,8 +417,37 @@ this.follow = function(rel) {
     return P.all(promises)
 }
 
-//http api
-this.post = function(data = {}) {
+//http api</code></pre>
+          <section id="post">
+            <h1>post</h1>
+            <h5 class="subheader"></h5>
+            <p>
+              <div class="label label-info radius ctx-type">method</div><span>&nbsp;</span><span>this.post()</span><span>&nbsp;</span>
+            </p>
+          </section>
+          <table class="table table-bordered table-striped">
+            <thead>
+              <tr>
+                <th style="width:20%">Option name</th>
+                <th style="width:20%">Type</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>data</td>
+                <td>Object</td>
+                <td><p>optional body content to send</p></td>
+              </tr>
+              <tr>
+                <td>return</td>
+                <td>Promise</td>
+                <td><p>the {resource,response} object of either the new resource (when a <code>Location</code> header is present in response) or the current instance.<br />*</p></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="description"><p>Issues a <code>POST</code> request against this resource<br />Follows up with a <code>GET</code> right away if a <code>Location</code> header is present, as in<br />a <code>201 Created</code> response.</p></div>
+          <pre><code class="language-javascript">this.post = function(data = {}) {
     const url = this.self
     const req = {
         credentials: 'include'
@@ -178,9 +471,16 @@ this.post = function(data = {}) {
         .then(headerHandler(req.method))
         .then(respond(req.method))
     })
-}
-
-this.put = function() {
+}</code></pre>
+          <section id="put">
+            <h1>put</h1>
+            <h5 class="subheader"></h5>
+            <p>
+              <div class="label label-info radius ctx-type">method</div><span>&nbsp;</span><span>this.put()</span><span>&nbsp;</span>
+            </p>
+          </section>
+          <div class="description"><p>Issues a <code>PUT</code> request against this resource<br />Follows up with a <code>GET</code> right away to resync this resource.</p></div>
+          <pre><code class="language-javascript">this.put = function() {
     const url = this.self
     let serialized = this.toJSON()
     //dont include _links
@@ -255,7 +555,7 @@ this.put = function() {
               <div class="label label-info radius ctx-type">method</div><span>&nbsp;</span><span>this.delete()</span><span>&nbsp;</span>
             </p>
           </section>
-          <div class="description"><p><a href="http://tools.ietf.org/html/rfc2616#section-9.7">http://tools.ietf.org/html/rfc2616#section-9.7</a></p></div>
+          <div class="description"><p>Issues a <code>DELETE</code> request against this resource<br /><a href="http://tools.ietf.org/html/rfc2616#section-9.7">http://tools.ietf.org/html/rfc2616#section-9.7</a></p></div>
           <pre><code class="language-javascript">this.delete = function() {
     const url = this.self
     const req = {
@@ -292,11 +592,16 @@ this.put = function() {
               <tr>
                 <td>[to]</td>
                 <td>Object</td>
-                <td><p>optionally pass the patch data to use for diff When this argument is included, it will diff the current state of the<br />resource against that patch shape.<br />Otherwise, it will diff against the <em>original</em> body and the current state<br />of the resource.</p></td>
+                <td><p>optionally pass the patch data to use for diff When this argument is included, it will diff the current state of the<br />resource against that patch shape.<br />Otherwise, it will diff against the <em>original</em> body and the current state<br />of the resource.<br />It will immediately issue an <code>GET</code> request to resync from the server.</p></td>
+              </tr>
+              <tr>
+                <td>return</td>
+                <td>Promise</td>
+                <td><p>resolving to a {request,response} object for a new instance of this resource</p></td>
               </tr>
             </tbody>
           </table>
-          <div class="description"><p><a href="http://tools.ietf.org/html/rfc6902">http://tools.ietf.org/html/rfc6902</a></p></div>
+          <div class="description"><p>Issues a <code>PATCH</code> request against this resource<br /><a href="http://tools.ietf.org/html/rfc6902">http://tools.ietf.org/html/rfc6902</a></p></div>
           <pre><code class="language-javascript">this.patch  = function(to) {
     const url = this.self
     let serialized = this.toJSON({ _links: false, _embedded: false})
@@ -310,15 +615,24 @@ this.put = function() {
         , headers: {
             'accept': MIME
             ,'content-type': 'application/json-patch+json'
+            , 'version': 'http/1.1'
         }
         , body: patch
+        , mode: 'cors'
     }
     return this.fetch(url, req)
     .then(headerHandler(req.method))
     .then(sync.bind(this,this.self))
-}
-
-this.options = function() {
+}</code></pre>
+          <section id="options">
+            <h1>options</h1>
+            <h5 class="subheader"></h5>
+            <p>
+              <div class="label label-info radius ctx-type">method</div><span>&nbsp;</span><span>this.options()</span><span>&nbsp;</span>
+            </p>
+          </section>
+          <div class="description"><p>Issues a <code>OPTIONS</code> request against this resource</p></div>
+          <pre><code class="language-javascript">this.options = function() {
     let url = this.self
     let req = {
         credentials: 'include'
@@ -329,8 +643,16 @@ this.options = function() {
     return this.fetch(url, req)
     .then(headerHandler(req.method))
     .then(respond(req.method))
-}
-this.head = function() {
+}</code></pre>
+          <section id="head">
+            <h1>head</h1>
+            <h5 class="subheader"></h5>
+            <p>
+              <div class="label label-info radius ctx-type">method</div><span>&nbsp;</span><span>this.head()</span><span>&nbsp;</span>
+            </p>
+          </section>
+          <div class="description"><p>Issues a <code>HEAD</code> request against this resource</p></div>
+          <pre><code class="language-javascript">this.head = function() {
     let url = this.self
     let req = {
         credentials: 'include'

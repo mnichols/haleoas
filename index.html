@@ -51,6 +51,17 @@
 <li><code>PATCH</code> : conforms to <a href="http://tools.ietf.org/html/rfc6902">RFC6902</a> and sends <code>content-type:application/json-patch+json</code></li>
 <li><code>DELETE</code></li>
 </ul>
+<h3>Browser support</h3>
+<p>When running browser tests, a modern web server is expected ^1.1.</p>
+<ul>
+<li>Safari borks by babel-core because of <a href="https://github.com/thlorenz/convert-source-map/issues/31">this silliness</a></li>
+</ul>
+<h3>Running tests</h3>
+<p><strong>NodeJS</strong>
+<code>npm test</code></p>
+<p><strong>Browser</strong></p>
+<p><code>npm serve</code></p>
+<p>In your browser, visit <code>http://localhost:3000/test-runner.html</code> and look in the console.</p>
 </section>
         </div>
       </div>
