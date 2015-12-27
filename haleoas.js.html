@@ -35,7 +35,7 @@
           </ul>
           <div class="scrollspy">
             <ul class="nav nav-list bs-docs-sidenav affix-top">
-              <li><a href="#haleoas"><i class="alert alert-success"></i><span>haleoas</span></a>
+              <li><a href="#haleoasFactory"><i class="alert alert-info"></i><span>haleoasFactory</span></a>
               </li>
               <li><a href="#bodyHandler"><i class="alert alert-success"></i><span>bodyHandler</span></a>
               </li>
@@ -71,13 +71,45 @@
           </div>
         </div>
         <div class="span9">
-          <section id="haleoas">
-            <h1>haleoas</h1>
+          <section id="haleoasFactory">
+            <h1>haleoasFactory</h1>
             <h5 class="subheader"></h5>
             <p>
-              <div class="label label-success radius ctx-type">declaration</div><span>&nbsp;</span><span>haleoas</span><span>&nbsp;</span>
+              <div class="label label-info radius ctx-type">function</div><span>&nbsp;</span><span>haleoasFactory()</span><span>&nbsp;</span>
             </p>
           </section>
+          <table class="table table-bordered table-striped">
+            <thead>
+              <tr>
+                <th style="width:20%">Option name</th>
+                <th style="width:20%">Type</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>opts</td>
+                <td>Object</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td>[fetch]</td>
+                <td>Function</td>
+                <td><ul>
+<li>the function to use for fetches via HTTP</li>
+</ul>
+</td>
+              </tr>
+              <tr>
+                <td>return</td>
+                <td>stamp</td>
+                <td><p>haleoas stamp for creation of resources and traversal through an HAL api *</p></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="description"><p>A factory factory for global config and application handle.<br />for example, you likely want to use a <code>fetch</code> implementation through the<br />whole application, so you can pass in that as an option and it will<br />be used for all instances created by the resource stamps.</p></div>
+          <pre><code class="language-javascript">export default function haleoasFactory(opts = {}) {
+let {fetch:globalFetch} = opts</code></pre>
           <table class="table table-bordered table-striped">
             <thead>
               <tr>
@@ -110,9 +142,10 @@
             </tbody>
           </table>
           <div class="description"><p>factory for a resource</p></div>
-          <pre><code class="language-javascript">const haleoas = stampit()
+          <pre><code class="language-javascript">return stampit()
 .init(function({instance, stamp}){
     let body,links,embedded, allow = []
+    let fetch = (this.fetch || globalFetch)
     this.logerror = (this.logerror || this.log || console.error.bind(console))
     this.log = (this.log || console.log.bind(console))
 
@@ -199,9 +232,9 @@ const respond = (method) =&gt; {
 }
 
 const sync = (self) =&gt; {
-    return haleoas({
+    return stamp({
         self
-        , fetch: this.fetch
+        , fetch
     }).get()
 }
 
@@ -412,7 +445,7 @@ const stringifyReplacer = (key, value) =&gt; {
     //allow non-global Promise
     let P = (this.Promise || Promise)
     let promises = lnks.map((lnk) =&gt; {
-        return haleoas({ self: lnk.href, fetch: this.fetch })
+        return stamp({ self: lnk.href, fetch })
     })
     return P.all(promises)
 }
@@ -450,15 +483,14 @@ const stringifyReplacer = (key, value) =&gt; {
           <pre><code class="language-javascript">this.post = function(data = {}) {
     const url = this.self
     const req = {
-        credentials: 'include'
-        , method: 'POST'
+        method: 'POST'
         , headers: {
             'accept': MIME
-            ,'content-type': MIME
+            ,'content-type': 'application/json'
         }
         , body: JSON.stringify(data)
     }
-    return this.fetch(url, req)
+    return fetch(url, req)
     .then((response) =&gt; {
         let location = response.headers.get('location')
         if(location) {
@@ -486,15 +518,14 @@ const stringifyReplacer = (key, value) =&gt; {
     //dont include _links
     ;(delete serialized._links)
     const req = {
-        credentials: 'include'
-        , method: 'PUT'
+        method: 'PUT'
         , headers: {
             'accept': MIME
             ,'content-type': 'application/json'
         }
         , body: JSON.stringify(serialized)
     }
-    return this.fetch(url, req)
+    return fetch(url, req)
     .then(headerHandler(req.method))
     .then(sync.bind(this,this.self))
 }</code></pre>
@@ -533,8 +564,7 @@ const stringifyReplacer = (key, value) =&gt; {
         url  = this.expand(url,params)[0]
     }
     const req = {
-        credentials: 'include'
-        , method: 'GET'
+        method: 'GET'
         , headers: {
             'accept': MIME
             ,'content-type': MIME
@@ -542,7 +572,7 @@ const stringifyReplacer = (key, value) =&gt; {
         //https://groups.yahoo.com/neo/groups/rest-discuss/conversations/messages/9962
         , body: undefined
     }
-    return this.fetch(url, req)
+    return fetch(url, req)
     .then(bodyHandler(req.method))
     .then(headerHandler(req.method))
     .then(correctSelf)
@@ -559,14 +589,12 @@ const stringifyReplacer = (key, value) =&gt; {
           <pre><code class="language-javascript">this.delete = function() {
     const url = this.self
     const req = {
-        credentials: 'include'
-        , method: 'DELETE'
+        method: 'DELETE'
         , headers: {
             'accept': MIME
-            ,'content-type': MIME
         }
     }
-    return this.fetch(url, req)
+    return fetch(url, req)
     .then(headerHandler(req.method))
     //@TODO handle 200
     //by parsing to a HAL status entity
@@ -610,17 +638,14 @@ const stringifyReplacer = (key, value) =&gt; {
     let patch = diff( src, dest )
 
     let req = {
-        credentials: 'include'
-        , method: 'PATCH'
+        method: 'PATCH'
         , headers: {
             'accept': MIME
             ,'content-type': 'application/json-patch+json'
-            , 'version': 'http/1.1'
         }
         , body: patch
-        , mode: 'cors'
     }
-    return this.fetch(url, req)
+    return fetch(url, req)
     .then(headerHandler(req.method))
     .then(sync.bind(this,this.self))
 }</code></pre>
@@ -635,12 +660,11 @@ const stringifyReplacer = (key, value) =&gt; {
           <pre><code class="language-javascript">this.options = function() {
     let url = this.self
     let req = {
-        credentials: 'include'
-        , method: 'OPTIONS'
+        method: 'OPTIONS'
         , headers: {}
         , body: undefined
     }
-    return this.fetch(url, req)
+    return fetch(url, req)
     .then(headerHandler(req.method))
     .then(respond(req.method))
 }</code></pre>
@@ -655,12 +679,11 @@ const stringifyReplacer = (key, value) =&gt; {
           <pre><code class="language-javascript">this.head = function() {
     let url = this.self
     let req = {
-        credentials: 'include'
-        , method: 'HEAD'
+        method: 'HEAD'
         , headers: { }
         , body: undefined
     }
-    return this.fetch(url, req)
+    return fetch(url, req)
     .then(headerHandler(req.method))
     .then(respond(req.method))
 }
@@ -677,7 +700,7 @@ if(this.body) {
 }
 
 })
-export default haleoas</code></pre>
+}</code></pre>
         </div>
       </div>
     </div>
