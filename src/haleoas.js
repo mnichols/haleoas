@@ -4,6 +4,18 @@ import stampit from 'stampit'
 import urlTemplate from 'url-template'
 import diff from 'json-patch-gen'
 
+
+/**
+ * A factory factory for global config and application handle.
+ * for example, you likely want to use a `fetch` implementation through the
+ * whole application, so you can pass in that as an option and it will
+ * be used for all instances created by the resource stamps.
+ * @param {Object} opts
+ *  @param {Function} [fetch] - the function to use for fetches via HTTP
+ * @return {stamp} haleoas stamp for creation of resources and traversal through an HAL api
+ * **/
+export default function haleoasFactory(opts = {}) {
+let {fetch:globalFetch} = opts
 /**
  * factory for a resource
  * @param {Function} fetch the xhr implementation for http. Prefer the [fetch api](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API).
@@ -11,9 +23,10 @@ import diff from 'json-patch-gen'
  * @param {Object} [body] a valid `HAL` representation to seed the resource with
  * @param {Promise} [Promise] a Promise implementation conforming to [this](https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Promise)
  * */
-const haleoas = stampit()
+return stampit()
 .init(function({instance, stamp}){
     let body,links,embedded, allow = []
+    let fetch = (this.fetch || globalFetch)
     this.logerror = (this.logerror || this.log || console.error.bind(console))
     this.log = (this.log || console.log.bind(console))
 
@@ -96,9 +109,9 @@ const haleoas = stampit()
     }
 
     const sync = (self) => {
-        return haleoas({
+        return stamp({
             self
-            , fetch: this.fetch
+            , fetch
         }).get()
     }
 
@@ -202,7 +215,7 @@ const haleoas = stampit()
         //allow non-global Promise
         let P = (this.Promise || Promise)
         let promises = lnks.map((lnk) => {
-            return haleoas({ self: lnk.href, fetch: this.fetch })
+            return stamp({ self: lnk.href, fetch })
         })
         return P.all(promises)
     }
@@ -219,15 +232,14 @@ const haleoas = stampit()
     this.post = function(data = {}) {
         const url = this.self
         const req = {
-            credentials: 'include'
-            , method: 'POST'
+            method: 'POST'
             , headers: {
                 'accept': MIME
-                ,'content-type': MIME
+                ,'content-type': 'application/json'
             }
             , body: JSON.stringify(data)
         }
-        return this.fetch(url, req)
+        return fetch(url, req)
         .then((response) => {
             let location = response.headers.get('location')
             if(location) {
@@ -253,15 +265,14 @@ const haleoas = stampit()
         //dont include _links
         ;(delete serialized._links)
         const req = {
-            credentials: 'include'
-            , method: 'PUT'
+            method: 'PUT'
             , headers: {
                 'accept': MIME
                 ,'content-type': 'application/json'
             }
             , body: JSON.stringify(serialized)
         }
-        return this.fetch(url, req)
+        return fetch(url, req)
         .then(headerHandler(req.method))
         .then(sync.bind(this,this.self))
     }
@@ -279,8 +290,7 @@ const haleoas = stampit()
             url  = this.expand(url,params)[0]
         }
         const req = {
-            credentials: 'include'
-            , method: 'GET'
+            method: 'GET'
             , headers: {
                 'accept': MIME
                 ,'content-type': MIME
@@ -288,7 +298,7 @@ const haleoas = stampit()
             //https://groups.yahoo.com/neo/groups/rest-discuss/conversations/messages/9962
             , body: undefined
         }
-        return this.fetch(url, req)
+        return fetch(url, req)
         .then(bodyHandler(req.method))
         .then(headerHandler(req.method))
         .then(correctSelf)
@@ -303,14 +313,12 @@ const haleoas = stampit()
     this.delete = function() {
         const url = this.self
         const req = {
-            credentials: 'include'
-            , method: 'DELETE'
+            method: 'DELETE'
             , headers: {
                 'accept': MIME
-                ,'content-type': MIME
             }
         }
-        return this.fetch(url, req)
+        return fetch(url, req)
         .then(headerHandler(req.method))
         //@TODO handle 200
         //by parsing to a HAL status entity
@@ -336,17 +344,14 @@ const haleoas = stampit()
         let patch = diff( src, dest )
 
         let req = {
-            credentials: 'include'
-            , method: 'PATCH'
+            method: 'PATCH'
             , headers: {
                 'accept': MIME
                 ,'content-type': 'application/json-patch+json'
-                , 'version': 'http/1.1'
             }
             , body: patch
-            , mode: 'cors'
         }
-        return this.fetch(url, req)
+        return fetch(url, req)
         .then(headerHandler(req.method))
         .then(sync.bind(this,this.self))
     }
@@ -358,12 +363,11 @@ const haleoas = stampit()
     this.options = function() {
         let url = this.self
         let req = {
-            credentials: 'include'
-            , method: 'OPTIONS'
+            method: 'OPTIONS'
             , headers: {}
             , body: undefined
         }
-        return this.fetch(url, req)
+        return fetch(url, req)
         .then(headerHandler(req.method))
         .then(respond(req.method))
     }
@@ -374,12 +378,11 @@ const haleoas = stampit()
     this.head = function() {
         let url = this.self
         let req = {
-            credentials: 'include'
-            , method: 'HEAD'
+            method: 'HEAD'
             , headers: { }
             , body: undefined
         }
-        return this.fetch(url, req)
+        return fetch(url, req)
         .then(headerHandler(req.method))
         .then(respond(req.method))
     }
@@ -396,4 +399,4 @@ const haleoas = stampit()
     }
 
 })
-export default haleoas
+}

@@ -1,7 +1,7 @@
 'use strict';
 
 import test from 'blue-tape'
-import hal from '../src/haleoas.js'
+import haleoas from '../src/haleoas.js'
 import fetchMock from 'fetch-mock'
 import deepEqual from 'deep-equal'
 import 'isomorphic-fetch'
@@ -11,6 +11,10 @@ const getOrigin = () => {
     return 'http://example.com'
 }
 const origin = getOrigin()
+const hal = (spec) => {
+    return haleoas({ fetch })(spec)
+}
+
 const fullyLoaded = () => {
     let body = {
         "_links": {
@@ -73,7 +77,6 @@ test('invalid content-type doesnt throw',(assert) => {
 
     let sut = hal({
         self: `${origin}/orders`
-        , fetch
     })
     return sut.get().catch((err) => {
         assert.equal(err.message,'illegal content type at ${origin}/orders : text/plain')
@@ -95,7 +98,6 @@ test('simple HEAD works',(assert) => {
 
     let sut = hal({
         self: self.href
-        , fetch
     })
     return sut.head().then((it) => {
         assert.deepEqual(sut.allow(),['GET','PUT','POST','DELETE'])
@@ -116,7 +118,6 @@ test('simple OPTIONS works',(assert) => {
 
     let sut = hal({
         self: self.href
-        , fetch
     })
     return sut.options().then((it) => {
         assert.deepEqual(sut.allow(),['GET','PUT','POST','DELETE'])
@@ -140,7 +141,6 @@ test('simple GET works',(assert) => {
 
     let sut = hal({
         self: `${origin}/orders`
-        , fetch
     })
     return sut.get().then((it) => {
         assert.equal(sut.currentlyProcessing,14)
@@ -161,7 +161,6 @@ test('GET with RFC6570 params works',(assert) => {
 
     let sut = hal({
         self: `${origin}/orders{?page,size}`
-        , fetch
     })
     return sut.get({page:2,size:10}).then((it) => {
         assert.equal(sut.currentlyProcessing,14)
@@ -182,7 +181,6 @@ test('GET with http errors dont fail',(assert) => {
 
     let sut = hal({
         self: `${origin}/orders`
-        , fetch
     })
     return sut.get().catch((err) => {
         assert.equal(err.message,'Yousuck')
@@ -194,7 +192,7 @@ test('simple POST works',(assert) => {
     let matcher = (url, opts) => {
         let {'content-type':contentType} = opts.headers
         let { body} = opts
-        return contentType === 'application/hal+json' &&
+        return contentType === 'application/json' &&
             url === `${origin}/orders` &&
             body === JSON.stringify({foo:'bar'})
     }
@@ -209,7 +207,6 @@ test('simple POST works',(assert) => {
 
     let sut = hal({
         self: `${origin}/orders`
-        , fetch
     })
     return sut.post({foo:'bar'}).then(({response, resource}) => {
         assert.equal(response.status, 204)
@@ -222,7 +219,7 @@ test('POST resulting in location follows created entity',(assert) => {
     let matcher = (url, opts) => {
         let {'content-type':contentType} = opts.headers
         let { body} = opts
-        return contentType === 'application/hal+json' &&
+        return contentType === 'application/json' &&
             url === `${origin}/orders` &&
             body === JSON.stringify({foo:'bar'})
     }
@@ -250,7 +247,6 @@ test('POST resulting in location follows created entity',(assert) => {
 
     let sut = hal({
         self: `${origin}/orders`
-        , fetch
     })
     return sut.post({foo:'bar'}).then(({resource}) => {
         assert.equal(resource.self,`${origin}/orders/1`)
@@ -270,7 +266,6 @@ test('DELETE works',(assert) => {
 
     let sut = hal({
         self: `${origin}/orders`
-        , fetch
     })
     return sut.delete().then(({response, resource}) => {
         assert.equal(response.status, 204)
@@ -309,7 +304,6 @@ test('PUT resulting sends full body and syncs',(assert) => {
     let body = fullyLoaded()
     let sut = hal({
         self: self.href
-        , fetch
         , body:bodyBefore
     })
     //add an attribute, remove an attribute
@@ -373,7 +367,6 @@ test('PATCH works (RFC6902) and refetches the resource', (assert) => {
 
     let sut = hal({
         self: self.href
-        , fetch
         , body
     })
     return sut.patch({ foo: 'baz', deep: { thoughts: 'jazz'}})
@@ -436,7 +429,6 @@ test('PATCH uses current state against original (RFC6902) and refetches the reso
 
     let sut = hal({
         self: self.href
-        , fetch
         , body
     })
     sut.foo = 'baz'

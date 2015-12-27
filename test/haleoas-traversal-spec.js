@@ -1,11 +1,12 @@
 'use strict';
 
 import test from 'blue-tape'
-import hal from '../src/haleoas.js'
+import haleoas from '../src/haleoas.js'
 import fetchMock from 'fetch-mock'
 import deepEqual from 'deep-equal'
 import 'isomorphic-fetch'
 
+const hal = haleoas()
 
 const getOrigin = () => {
     if(typeof window !== 'undefined' ) { return window.location.origin}

@@ -32,3 +32,87 @@ In your browser, visit `http://localhost:3000/test-runner.html` and look in the 
 
 
 
+### Usage
+
+#### GET
+
+```js
+import haleoas from ‘haleoas’
+let hal = haleoas({ fetch: myFetchImpl })
+let resource = hal({ self: ‘http://my.api.com{?foo’})
+/**
+ * GET /?foo=bar HTTP/1.1
+ * Host: http://my.api.com
+ * Accept: application/hal+json
+**/
+resource.get({ foo: ‘bar’, fetch: globalFetch }).then({ resource, response }) => {
+    //the resource, mapped to the HAL body and ready for traversal
+    //the response, whatever is returned from `fetch`
+})
+```
+
+#### POST
+
+```js
+import haleoas from ‘haleoas’
+let hal = haleoas({ fetch: myFetchImpl })
+let resource = hal({ self: ‘http://my.api.com’})
+/**
+ * POST / HTTP/1.1
+ * Host: http://my.api.com
+ * Content-Type: application/json
+ * Accept: application/hal+json
+ * 
+ * {
+ *  “foo”: “bar”
+ * }
+**/
+resource.post({ foo: ‘bar’, fetch: globalFetch }).then({ resource, response }) => {
+    //the resource, mapped to the HAL body and ready for traversal
+    // or, if a 201 with a `location` is returned, the new entity is returned
+    //the response, whatever is returned from `fetch`
+})
+```
+
+#### DELETE
+
+```js
+import haleoas from ‘haleoas’
+let hal = haleoas({ fetch: myFetchImpl })
+let resource = hal({ self: ‘http://my.api.com’})
+/**
+ * DELETE / HTTP/1.1
+ * Host: http://my.api.com
+ * Accept: application/hal+json
+**/
+resource.delete().then({ resource, response }) => {
+    //the resource, mapped to the HAL body and ready for traversal
+    //the response, whatever is returned from `fetch`
+})
+```
+
+#### PATCH
+
+```js
+import haleoas from ‘haleoas’
+let hal = haleoas({ fetch: myFetchImpl })
+let resource = hal({ self: ‘http://my.api.com’})
+/**
+ * PATCH / HTTP/1.1
+ * Host: http://my.api.com
+ * Accept: application/hal+json
+ * Content-Type: application/json-patch+json
+ *
+ * [
+ *   {
+ *     “op”:“add”,
+ *     “path”: “/foo”,
+ *     “value”: “bar”
+ *   }
+ *]
+**/
+resource.patch({foo:bar}).then({ resource, response }) => {
+    //the resource, mapped to the HAL body and ready for traversal
+    //the response, whatever is returned from `fetch`
+})
+```
