@@ -191,8 +191,8 @@ const haleoas = stampit()
     /**
      * Follows the relation(s) at `rel`
      * @param {String} rel The relationship to traverse
-     * @return {Promise} resolving an Array of {resource,response} objects
-     * for each link.
+     * @return {Promise} resolving an Array of {haleoas} instances
+     * for each link, but _have not_ been synced with server.
      * **/
     this.follow = function(rel) {
         let lnks = this.links(rel)
@@ -202,7 +202,7 @@ const haleoas = stampit()
         //allow non-global Promise
         let P = (this.Promise || Promise)
         let promises = lnks.map((lnk) => {
-            return haleoas({ self: lnk.href, fetch: this.fetch }).get()
+            return haleoas({ self: lnk.href, fetch: this.fetch })
         })
         return P.all(promises)
     }

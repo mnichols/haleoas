@@ -56,7 +56,7 @@ test('following a single relationship works',(assert) => {
     return sut.get()
     .then(sut.follow.bind(sut,'co:b'))
     .then((results) => {
-        assert.equal(results[0].resource.self,res2.self)
+        assert.equal(results[0].self,res2.self)
     })
 })
 
