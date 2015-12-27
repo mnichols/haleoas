@@ -390,8 +390,7 @@ const haleoas = stampit()
         ;(delete this.body)
         parse(copy)
         correctSelf()
-    }
-    if(this.self) {
+    } else if(this.self) {
         //add self link immediately
         links = { self: { href: this.self} }
     }
