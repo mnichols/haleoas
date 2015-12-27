@@ -399,7 +399,7 @@ const stringifyReplacer = (key, value) =&gt; {
               <tr>
                 <td>return</td>
                 <td>Promise</td>
-                <td><p>resolving an Array of {resource,response} objects for each link.<br />*</p></td>
+                <td><p>resolving an Array of {haleoas} instances for each link, but <em>have not</em> been synced with server.<br />*</p></td>
               </tr>
             </tbody>
           </table>
@@ -412,7 +412,7 @@ const stringifyReplacer = (key, value) =&gt; {
     //allow non-global Promise
     let P = (this.Promise || Promise)
     let promises = lnks.map((lnk) =&gt; {
-        return haleoas({ self: lnk.href, fetch: this.fetch }).get()
+        return haleoas({ self: lnk.href, fetch: this.fetch })
     })
     return P.all(promises)
 }
