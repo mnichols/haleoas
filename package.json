@@ -1,6 +1,6 @@
 {
   "name": "haleoas",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "description": "HAL client",
   "main": "./dist/haleoas.js",
   "scripts": {
@@ -58,6 +58,8 @@
     "whatwg-fetch": "^0.10.1"
   },
   "jspm": {
+    "jspmNodeConversion": false,
+    "format": "es6",
     "dependencies": {
       "blue-tape": "npm:blue-tape@^0.1.11",
       "deep-equal": "npm:deep-equal@^1.0.1",
