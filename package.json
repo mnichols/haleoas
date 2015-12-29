@@ -1,6 +1,6 @@
 {
   "name": "haleoas",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "HAL client",
   "main": "./dist/haleoas.js",
   "scripts": {
@@ -59,7 +59,7 @@
   },
   "jspm": {
     "jspmNodeConversion": false,
-    "format": "es6",
+    "format": "cjs",
     "dependencies": {
       "blue-tape": "npm:blue-tape@^0.1.11",
       "deep-equal": "npm:deep-equal@^1.0.1",
