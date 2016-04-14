@@ -211,10 +211,10 @@ let {fetch:globalFetch} = opts</code></pre>
             .then(() =&gt; {
                 return response
             })
-            .catch((err)=&gt; {
-                this.logerror(err)
+            .catch(err =&gt; {
+                this.logerror(err);
                 return response
-            })
+            });
         } catch(err) {
             this.logerror(err)
             return response
