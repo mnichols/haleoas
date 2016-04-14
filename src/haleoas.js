@@ -88,10 +88,10 @@ return stampit()
                 .then(() => {
                     return response
                 })
-                .catch((err)=> {
-                    this.logerror(err)
+                .catch(err => {
+                    this.logerror(err);
                     return response
-                })
+                });
             } catch(err) {
                 this.logerror(err)
                 return response

@@ -356,7 +356,7 @@ test('PATCH works (RFC6902) and refetches the resource', (assert) => {
         ,status: 204
         , body: null
     })
-    .mock(self.href, 'GET', {
+    .mock(self.href, 'get', {
         headers: {
             'content-type': 'application/hal+json'
             , 'content-length': JSON.stringify(responseBody).length
@@ -388,12 +388,13 @@ test('PATCH uses current state against original (RFC6902) and refetches the reso
             thoughts: 'jack'
         }
     }
+
     let matcher = function(url, opts) {
         let {body} = opts
         let patches = [ {
-            op: 'replace', path: '/deep/thoughts', value: 'jazz'
-        }, {
             op: 'replace', path: '/foo', value: 'baz'
+        }, {
+            op: 'replace', path: '/deep/thoughts', value: 'jazz'
         } ]
 
         let {'content-type':contentType} = opts.headers
@@ -409,16 +410,15 @@ test('PATCH uses current state against original (RFC6902) and refetches the reso
         , foo: 'baz'
         , deep: { thoughts: 'jazz' }
     }
-
     fetchMock.mock(matcher, 'patch', {
         headers: {
             'content-type': 'application/hal+json'
-            , 'content-length': 0
+            ,'content-length': 0
         }
         ,status: 204
         , body: null
     })
-    .mock(self.href, 'GET', {
+    .mock(self.href, 'get', {
         headers: {
             'content-type': 'application/hal+json'
             , 'content-length': JSON.stringify(responseBody).length

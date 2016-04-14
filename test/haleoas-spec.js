@@ -2,6 +2,7 @@
 
 import test from 'blue-tape'
 import haleoas from '../src/haleoas.js'
+
 const hal = haleoas()
 
 const fullyLoaded = () => {
