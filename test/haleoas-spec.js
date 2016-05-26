@@ -72,6 +72,14 @@ test('expanding link works',(assert) => {
     assert.equal(multi[1],'/a?foo=2')
     assert.end()
 })
+test('expanding link on proto works', (assert) => {
+    let simple = haleoas().expand('/a{?foo}',{foo:1})
+    let multi = haleoas().expand('/a{?foo}',[{foo:1},{foo:2}])
+    assert.equal(simple[0],'/a?foo=1')
+    assert.equal(multi[0],'/a?foo=1')
+    assert.equal(multi[1],'/a?foo=2')
+    assert.end()
+})
 test('body is supported in initialization',(assert) => {
     let body = {
         "_links": {

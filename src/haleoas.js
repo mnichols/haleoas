@@ -24,6 +24,23 @@ let {fetch:globalFetch} = opts
  * @param {Promise} [Promise] a Promise implementation conforming to [this](https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Promise)
  * */
 return stampit()
+.static({
+    /**
+     * Expand a url conforming to http://tools.ietf.org/html/rfc6570
+     * with the params.
+     * @param {Url} url http://tools.ietf.org/html/rfc6570
+     * @param {Object} params parameters to expand in the url
+     * @return {Url} the expanded url
+     * */
+    expand: function(link, params) {
+        //only arrays
+        params = [].concat(params)
+        let exp = urlTemplate.parse(link.href || link)
+        return params.map((q)=> {
+            return exp.expand(q ||{})
+        })
+    }
+})
 .init(function({instance, stamp}){
     let body,links,embedded, allow = []
     let fetch = (this.fetch || globalFetch)
@@ -165,20 +182,9 @@ return stampit()
         return this
     }
     /**
-     * Expand a url conforming to http://tools.ietf.org/html/rfc6570
-     * with the params
-     * @param {Url} url http://tools.ietf.org/html/rfc6570
-     * @param {Object} params parameters to expand in the url
-     * @return {Url} the expanded url
+     * see stamp root `expand` doc
      * */
-    this.expand = function(link, params) {
-        //only arrays
-        params = [].concat(params)
-        let exp = urlTemplate.parse(link.href || link)
-        return params.map((q)=> {
-            return exp.expand(q ||{})
-        })
-    }
+    this.expand = stamp.expand
     /**
      * @param {String} rel retrieve the list of links by relationship
      * @return {Array} of matching relationships from `_links` collection

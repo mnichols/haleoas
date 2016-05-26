@@ -1,4 +1,5 @@
 # HALEOAS
+
 ## HAL Hypermedia REST Client
 
 
@@ -18,6 +19,11 @@ Supported HTTP Methods:
 When running browser tests, a modern web server is expected ^1.1.
 
 * Safari borks by babel-core because of [this silliness](https://github.com/thlorenz/convert-source-map/issues/31)
+
+### Size
+
+- **unminified** ~3.8kb
+- **minified** ~1.4kb
 
 ### Running tests
 

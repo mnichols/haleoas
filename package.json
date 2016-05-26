@@ -1,6 +1,6 @@
 {
   "name": "haleoas",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "HAL client",
   "main": "./dist/haleoas.js",
   "scripts": {
@@ -10,7 +10,8 @@
     "docs": "mr-doc --source src --output docs --name haleoas",
     "gh-pages": "npm run docs && gh-pages -d docs",
     "prepublish": "npm run build && npm test && npm run gh-pages",
-    "serve": "serve"
+    "serve": "serve",
+    "browser": "cat test-bundle.js | tap-closer | smokestack && npm run clean"
   },
   "babel": {
     "presets": [
