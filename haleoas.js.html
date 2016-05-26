@@ -37,6 +37,8 @@
             <ul class="nav nav-list bs-docs-sidenav affix-top">
               <li><a href="#haleoasFactory"><i class="alert alert-info"></i><span>haleoasFactory</span></a>
               </li>
+              <li><a href="#expand"><i class="alert alert-info"></i><span>expand</span></a>
+              </li>
               <li><a href="#bodyHandler"><i class="alert alert-success"></i><span>bodyHandler</span></a>
               </li>
               <li><a href="#clone"><i class="alert alert-success"></i><span>clone</span></a>
@@ -45,7 +47,7 @@
               </li>
               <li><a href="#parse"><i class="alert alert-info"></i><span>parse</span></a>
               </li>
-              <li><a href="#expand"><i class="alert alert-info"></i><span>expand</span></a>
+              <li><a href="#expand"><i class="alert alert-success"></i><span>expand</span></a>
               </li>
               <li><a href="#links"><i class="alert alert-info"></i><span>links</span></a>
               </li>
@@ -143,44 +145,88 @@ let {fetch:globalFetch} = opts</code></pre>
           </table>
           <div class="description"><p>factory for a resource</p></div>
           <pre><code class="language-javascript">return stampit()
+.static({</code></pre>
+          <section id="expand">
+            <h1>expand</h1>
+            <h5 class="subheader"></h5>
+            <p>
+              <div class="label label-info radius ctx-type">method</div><span>&nbsp;</span><span>expand()</span><span>&nbsp;</span>
+            </p>
+          </section>
+          <table class="table table-bordered table-striped">
+            <thead>
+              <tr>
+                <th style="width:20%">Option name</th>
+                <th style="width:20%">Type</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>url</td>
+                <td>Url</td>
+                <td><p><a href="http://tools.ietf.org/html/rfc6570">http://tools.ietf.org/html/rfc6570</a></p></td>
+              </tr>
+              <tr>
+                <td>params</td>
+                <td>Object</td>
+                <td><p>parameters to expand in the url</p></td>
+              </tr>
+              <tr>
+                <td>return</td>
+                <td>Url</td>
+                <td><p>the expanded url</p></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="description"><p>Expand a url conforming to <a href="http://tools.ietf.org/html/rfc6570">http://tools.ietf.org/html/rfc6570</a><br />with the params.</p></div>
+          <pre><code class="language-javascript">expand: function(link, params) {
+    //only arrays
+    params = [].concat(params)
+    let exp = urlTemplate.parse(link.href || link)
+    return params.map((q)=&gt; {
+        return exp.expand(q ||{})
+    })
+}
+})
 .init(function({instance, stamp}){
-    let body,links,embedded, allow = []
-    let fetch = (this.fetch || globalFetch)
-    this.logerror = (this.logerror || this.log || console.error.bind(console))
-    this.log = (this.log || console.log.bind(console))
+let body,links,embedded, allow = []
+let fetch = (this.fetch || globalFetch)
+this.logerror = (this.logerror || this.log || console.error.bind(console))
+this.log = (this.log || console.log.bind(console))
 
-    const MIME = 'application/hal+json'
+const MIME = 'application/hal+json'
 
-    const correctSelf = (ignore) =&gt; {
-        let linkSelf = this.links('self')
-        if(linkSelf &amp;&amp; linkSelf[0]) {
-            this.self = linkSelf[0].href
+const correctSelf = (ignore) =&gt; {
+    let linkSelf = this.links('self')
+    if(linkSelf &amp;&amp; linkSelf[0]) {
+        this.self = linkSelf[0].href
+    }
+    return ignore
+}
+const parse = (json = {}) =&gt; {
+    let copy = Object.assign({},json)
+    ;({_links:links,_embedded:embedded} = copy)
+    ;(delete copy._links)
+    ;(delete copy._embedded)
+    body = copy
+    //merge body values onto `this`
+    Object.assign(this,copy)
+    return json
+}
+const headerHandler = (method) =&gt; {
+    return (response) =&gt; {
+        let allows = response.headers.get('allow')
+        if(allows) {
+            this.allow(allows.split(','))
         }
-        return ignore
+        return response
     }
-    const parse = (json = {}) =&gt; {
-        let copy = Object.assign({},json)
-        ;({_links:links,_embedded:embedded} = copy)
-        ;(delete copy._links)
-        ;(delete copy._embedded)
-        body = copy
-        //merge body values onto `this`
-        Object.assign(this,copy)
-        return json
-    }
-    const headerHandler = (method) =&gt; {
-        return (response) =&gt; {
-            let allows = response.headers.get('allow')
-            if(allows) {
-                this.allow(allows.split(','))
-            }
-            return response
-        }
-    }
-    const isBodyCandidate = (response) =&gt; {
-        let status = response.status
-        return (status &gt; 199 &amp;&amp; (status !== 204 &amp;&amp; status !== 304))
-    }</code></pre>
+}
+const isBodyCandidate = (response) =&gt; {
+    let status = response.status
+    return (status &gt; 199 &amp;&amp; (status !== 204 &amp;&amp; status !== 304))
+}</code></pre>
           <section id="bodyHandler">
             <h1>bodyHandler</h1>
             <h5 class="subheader"></h5>
@@ -302,44 +348,11 @@ const stringifyReplacer = (key, value) =&gt; {
             <h1>expand</h1>
             <h5 class="subheader"></h5>
             <p>
-              <div class="label label-info radius ctx-type">method</div><span>&nbsp;</span><span>this.expand()</span><span>&nbsp;</span>
+              <div class="label label-success radius ctx-type">property</div><span>&nbsp;</span><span>this.expand</span><span>&nbsp;</span>
             </p>
           </section>
-          <table class="table table-bordered table-striped">
-            <thead>
-              <tr>
-                <th style="width:20%">Option name</th>
-                <th style="width:20%">Type</th>
-                <th>Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>url</td>
-                <td>Url</td>
-                <td><p><a href="http://tools.ietf.org/html/rfc6570">http://tools.ietf.org/html/rfc6570</a></p></td>
-              </tr>
-              <tr>
-                <td>params</td>
-                <td>Object</td>
-                <td><p>parameters to expand in the url</p></td>
-              </tr>
-              <tr>
-                <td>return</td>
-                <td>Url</td>
-                <td><p>the expanded url</p></td>
-              </tr>
-            </tbody>
-          </table>
-          <div class="description"><p>Expand a url conforming to <a href="http://tools.ietf.org/html/rfc6570">http://tools.ietf.org/html/rfc6570</a><br />with the params</p></div>
-          <pre><code class="language-javascript">this.expand = function(link, params) {
-    //only arrays
-    params = [].concat(params)
-    let exp = urlTemplate.parse(link.href || link)
-    return params.map((q)=&gt; {
-        return exp.expand(q ||{})
-    })
-}</code></pre>
+          <div class="description"><p>see stamp root <code>expand</code> doc</p></div>
+          <pre><code class="language-javascript">this.expand = stamp.expand</code></pre>
           <section id="links">
             <h1>links</h1>
             <h5 class="subheader"></h5>
