@@ -111,7 +111,7 @@
           </table>
           <div class="description"><p>A factory factory for global config and application handle.<br />for example, you likely want to use a <code>fetch</code> implementation through the<br />whole application, so you can pass in that as an option and it will<br />be used for all instances created by the resource stamps.</p></div>
           <pre><code class="language-javascript">export default function haleoasFactory(opts = {}) {
-let {fetch:globalFetch} = opts</code></pre>
+let {fetch:globalFetch, Promise:globalPromise} = opts</code></pre>
           <table class="table table-bordered table-striped">
             <thead>
               <tr>
@@ -192,8 +192,10 @@ let {fetch:globalFetch} = opts</code></pre>
 .init(function({instance, stamp}){
 let body,links,embedded, allow = []
 let fetch = (this.fetch || globalFetch)
+this.Promise = (this.Promise || globalPromise || Promise)
 this.logerror = (this.logerror || this.log || console.error.bind(console))
 this.log = (this.log || console.log.bind(console))
+
 
 const MIME = 'application/hal+json'
 
@@ -456,7 +458,7 @@ const stringifyReplacer = (key, value) =&gt; {
         throw new Error(`${this.self} not related with '${rel}'`)
     }
     //allow non-global Promise
-    let P = (this.Promise || Promise)
+    let P = (this.Promise)
     let promises = lnks.map((lnk) =&gt; {
         return stamp({ self: lnk.href, fetch })
     })
@@ -510,7 +512,7 @@ const stringifyReplacer = (key, value) =&gt; {
             return sync(location)
         }
         //allow non-global Promise
-        let P = (this.Promise || Promise)
+        let P = (this.Promise)
         return P.resolve(response)
         .then(bodyHandler(req.method))
         .then(headerHandler(req.method))
