@@ -1,6 +1,6 @@
 {
   "name": "haleoas",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "HAL client",
   "main": "./dist/haleoas.js",
   "scripts": {
@@ -41,6 +41,7 @@
     "babel-preset-node5": "^11.0.1",
     "babel-tape-runner": "^2.0.1",
     "blue-tape": "^0.2.0",
+    "bluebird": "^3.4.0",
     "browser-run": "^3.1.0",
     "deep-equal": "^1.0.1",
     "faucet": "0.0.1",

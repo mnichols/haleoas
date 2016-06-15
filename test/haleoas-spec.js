@@ -2,6 +2,7 @@
 
 import test from 'blue-tape'
 import haleoas from '../src/haleoas.js'
+import bluebird from 'bluebird';
 
 const hal = haleoas()
 
@@ -91,6 +92,15 @@ test('body is supported in initialization',(assert) => {
     let res = hal({ self: "http://localhost:8000", body })
     assert.equal(res.links('about').length, 1)
     assert.end()
+})
+test('providing Promise impl works', (assert) => {
+    let body = fullyLoaded()
+    let sut = hal({ Promise: bluebird })
+    sut.parse(body)
+    return sut.follow('ea:find')
+    .tap( () => {
+        assert.pass('non-standard,bluebird TAP fn was used');
+    } )
 })
 
 

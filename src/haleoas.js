@@ -15,7 +15,7 @@ import diff from 'json-patch-gen'
  * @return {stamp} haleoas stamp for creation of resources and traversal through an HAL api
  * **/
 export default function haleoasFactory(opts = {}) {
-let {fetch:globalFetch} = opts
+let {fetch:globalFetch, Promise:globalPromise} = opts
 /**
  * factory for a resource
  * @param {Function} fetch the xhr implementation for http. Prefer the [fetch api](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API).
@@ -44,8 +44,10 @@ return stampit()
 .init(function({instance, stamp}){
     let body,links,embedded, allow = []
     let fetch = (this.fetch || globalFetch)
+    this.Promise = (this.Promise || globalPromise || Promise)
     this.logerror = (this.logerror || this.log || console.error.bind(console))
     this.log = (this.log || console.log.bind(console))
+
 
     const MIME = 'application/hal+json'
 
@@ -219,7 +221,7 @@ return stampit()
             throw new Error(`${this.self} not related with '${rel}'`)
         }
         //allow non-global Promise
-        let P = (this.Promise || Promise)
+        let P = (this.Promise)
         let promises = lnks.map((lnk) => {
             return stamp({ self: lnk.href, fetch })
         })
@@ -252,7 +254,7 @@ return stampit()
                 return sync(location)
             }
             //allow non-global Promise
-            let P = (this.Promise || Promise)
+            let P = (this.Promise)
             return P.resolve(response)
             .then(bodyHandler(req.method))
             .then(headerHandler(req.method))
