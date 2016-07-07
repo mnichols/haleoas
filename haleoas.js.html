@@ -502,8 +502,14 @@ const stringifyReplacer = (key, value) =&gt; {
             </tbody>
           </table>
           <div class="description"><p>Issues a <code>POST</code> request against this resource<br />Follows up with a <code>GET</code> right away if a <code>Location</code> header is present, as in<br />a <code>201 Created</code> response.</p></div>
-          <pre><code class="language-javascript">this.post = function(data = {}) {
-    const url = this.self
+          <pre><code class="language-javascript">this.post = function(cfg = {}) {
+    let { data, params } = cfg;
+    ;(delete cfg.data)
+    ;(delete cfg.params)
+    let url = this.self
+    if(params) {
+        url  = this.expand(url,params)[0]
+    }
     const req = {
         method: 'POST'
         , headers: {
@@ -512,7 +518,7 @@ const stringifyReplacer = (key, value) =&gt; {
         }
         , body: JSON.stringify(data)
     }
-    return fetch(url, req)
+    return fetch(url, Object.assign(req, cfg))
     .then((response) =&gt; {
         let location = response.headers.get('location')
         if(location) {
@@ -534,8 +540,14 @@ const stringifyReplacer = (key, value) =&gt; {
             </p>
           </section>
           <div class="description"><p>Issues a <code>PUT</code> request against this resource<br />Follows up with a <code>GET</code> right away to resync this resource.</p></div>
-          <pre><code class="language-javascript">this.put = function() {
-    const url = this.self
+          <pre><code class="language-javascript">this.put = function(cfg = {}) {
+    let { data, params } = cfg;
+    ;(delete cfg.data)
+    ;(delete cfg.params)
+    let url = this.self
+    if(params) {
+        url  = this.expand(url,params)[0]
+    }
     let serialized = this.toJSON()
     //dont include _links
     ;(delete serialized._links)
@@ -547,7 +559,7 @@ const stringifyReplacer = (key, value) =&gt; {
         }
         , body: JSON.stringify(serialized)
     }
-    return fetch(url, req)
+    return fetch(url, Object.assign(req, cfg))
     .then(headerHandler(req.method))
     .then(sync.bind(this,this.self))
 }</code></pre>
@@ -580,7 +592,9 @@ const stringifyReplacer = (key, value) =&gt; {
             </tbody>
           </table>
           <div class="description"></div>
-          <pre><code class="language-javascript">this.get = function(params) {
+          <pre><code class="language-javascript">this.get = function(cfg = {}) {
+    let { params } = cfg;
+    ;(delete cfg.params)
     let url = this.self
     if(params) {
         url  = this.expand(url,params)[0]
@@ -594,7 +608,7 @@ const stringifyReplacer = (key, value) =&gt; {
         //https://groups.yahoo.com/neo/groups/rest-discuss/conversations/messages/9962
         , body: undefined
     }
-    return fetch(url, req)
+    return fetch(url, Object.assign(req, cfg))
     .then(bodyHandler(req.method))
     .then(headerHandler(req.method))
     .then(correctSelf)
@@ -608,15 +622,21 @@ const stringifyReplacer = (key, value) =&gt; {
             </p>
           </section>
           <div class="description"><p>Issues a <code>DELETE</code> request against this resource<br /><a href="http://tools.ietf.org/html/rfc2616#section-9.7">http://tools.ietf.org/html/rfc2616#section-9.7</a></p></div>
-          <pre><code class="language-javascript">this.delete = function() {
-    const url = this.self
+          <pre><code class="language-javascript">this.delete = function(cfg = {}) {
+    let { data, params } = cfg;
+    ;(delete cfg.data)
+    ;(delete cfg.params)
+    let url = this.self
+    if(params) {
+        url  = this.expand(url,params)[0]
+    }
     const req = {
         method: 'DELETE'
         , headers: {
             'accept': MIME
         }
     }
-    return fetch(url, req)
+    return fetch(url, Object.assign(req, cfg))
     .then(headerHandler(req.method))
     //@TODO handle 200
     //by parsing to a HAL status entity
@@ -652,8 +672,14 @@ const stringifyReplacer = (key, value) =&gt; {
             </tbody>
           </table>
           <div class="description"><p>Issues a <code>PATCH</code> request against this resource<br /><a href="http://tools.ietf.org/html/rfc6902">http://tools.ietf.org/html/rfc6902</a></p></div>
-          <pre><code class="language-javascript">this.patch  = function(to) {
-    const url = this.self
+          <pre><code class="language-javascript">this.patch  = function(cfg = {}) {
+    let { data: to, params } = cfg;
+    ;(delete cfg.data)
+    ;(delete cfg.params)
+    let url = this.self
+    if(params) {
+        url  = this.expand(url,params)[0]
+    }
     let serialized = this.toJSON({ _links: false, _embedded: false})
     let dest = (to || serialized)
     let src = (to ? serialized : body)
@@ -667,7 +693,7 @@ const stringifyReplacer = (key, value) =&gt; {
         }
         , body: patch
     }
-    return fetch(url, req)
+    return fetch(url, Object.assign(req, cfg))
     .then(headerHandler(req.method))
     .then(sync.bind(this,this.self))
 }</code></pre>
@@ -679,8 +705,13 @@ const stringifyReplacer = (key, value) =&gt; {
             </p>
           </section>
           <div class="description"><p>Issues a <code>OPTIONS</code> request against this resource</p></div>
-          <pre><code class="language-javascript">this.options = function() {
+          <pre><code class="language-javascript">this.options = function(cfg = {}) {
+    let { params } = cfg;
+    ;(delete cfg.params)
     let url = this.self
+    if(params) {
+        url  = this.expand(url,params)[0]
+    }
     let req = {
         method: 'OPTIONS'
         , headers: {}
@@ -698,8 +729,13 @@ const stringifyReplacer = (key, value) =&gt; {
             </p>
           </section>
           <div class="description"><p>Issues a <code>HEAD</code> request against this resource</p></div>
-          <pre><code class="language-javascript">this.head = function() {
+          <pre><code class="language-javascript">this.head = function(cfg = {}) {
+    let { params } = cfg;
+    ;(delete cfg.params)
     let url = this.self
+    if(params) {
+        url  = this.expand(url,params)[0]
+    }
     let req = {
         method: 'HEAD'
         , headers: { }

@@ -68,6 +68,9 @@
 <p><code>npm serve</code></p>
 <p>In your browser, visit <code>http://localhost:3000/test-runner.html</code> and look in the console.</p>
 <h3>Usage</h3>
+<p><strong>BREAKING CHANGE AS OF v0.3.0: All HTTP methods may receive a full request config object + <code>data</code> and <code>params</code></strong></p>
+<p>A full Request object may be passed into all methods. For mutating methods, a <code>data</code> JSON parameter may be passed for serializing
+to the request body. For all methods a <code>params</code> Object parameter may be passed for expanding templated urls.</p>
 <h4>GET</h4>
 <pre><code class="language-js">import haleoas from ‘haleoas’
 let hal = haleoas({ fetch: myFetchImpl })
@@ -77,7 +80,11 @@ let resource = hal({ self: ‘http://my.api.com{?foo’})
  * Host: http://my.api.com
  * Accept: application/hal+json
 **/
-resource.get({ foo: ‘bar’, fetch: globalFetch }).then({ resource, response }) =&gt; {
+resource.get({ 
+    params: { 
+        foo: ‘bar’, 
+    }
+}).then({ resource, response }) =&gt; {
     //the resource, mapped to the HAL body and ready for traversal
     //the response, whatever is returned from `fetch`
 })
@@ -96,7 +103,12 @@ let resource = hal({ self: ‘http://my.api.com’})
  *  “foo”: “bar”
  * }
 **/
-resource.post({ foo: ‘bar’, fetch: globalFetch }).then({ resource, response }) =&gt; {
+resource.post({
+    data: {
+        foo: ‘bar’, 
+    },
+    params: { q: 'foo' }
+}).then({ resource, response }) =&gt; {
     //the resource, mapped to the HAL body and ready for traversal
     // or, if a 201 with a `location` is returned, the new entity is returned
     //the response, whatever is returned from `fetch`
