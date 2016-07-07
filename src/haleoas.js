@@ -245,8 +245,14 @@ return stampit()
      * @return {Promise} the {resource,response} object of either the new resource
      * (when a `Location` header is present in response) or the current instance.
      * **/
-    this.post = function(data = {}) {
-        const url = this.self
+    this.post = function(cfg = {}) {
+        let { data, params } = cfg;
+        ;(delete cfg.data)
+        ;(delete cfg.params)
+        let url = this.self
+        if(params) {
+            url  = this.expand(url,params)[0]
+        }
         const req = {
             method: 'POST'
             , headers: {
@@ -255,7 +261,7 @@ return stampit()
             }
             , body: JSON.stringify(data)
         }
-        return fetch(url, req)
+        return fetch(url, Object.assign(req, cfg))
         .then((response) => {
             let location = response.headers.get('location')
             if(location) {
@@ -275,8 +281,14 @@ return stampit()
      * Follows up with a `GET` right away to resync this resource.
      * @return {Promise} resolving to a {request,response} object for a new instance of this resource
      * **/
-    this.put = function() {
-        const url = this.self
+    this.put = function(cfg = {}) {
+        let { data, params } = cfg;
+        ;(delete cfg.data)
+        ;(delete cfg.params)
+        let url = this.self
+        if(params) {
+            url  = this.expand(url,params)[0]
+        }
         let serialized = this.toJSON()
         //dont include _links
         ;(delete serialized._links)
@@ -288,7 +300,7 @@ return stampit()
             }
             , body: JSON.stringify(serialized)
         }
-        return fetch(url, req)
+        return fetch(url, Object.assign(req, cfg))
         .then(headerHandler(req.method))
         .then(sync.bind(this,this.self))
     }
@@ -300,7 +312,9 @@ return stampit()
      * **Note** that `content-type` other than `application/hal+json` will not throw an error
      * and this instance will remain untouched.
      **/
-    this.get = function(params) {
+    this.get = function(cfg = {}) {
+        let { params } = cfg;
+        ;(delete cfg.params)
         let url = this.self
         if(params) {
             url  = this.expand(url,params)[0]
@@ -314,7 +328,7 @@ return stampit()
             //https://groups.yahoo.com/neo/groups/rest-discuss/conversations/messages/9962
             , body: undefined
         }
-        return fetch(url, req)
+        return fetch(url, Object.assign(req, cfg))
         .then(bodyHandler(req.method))
         .then(headerHandler(req.method))
         .then(correctSelf)
@@ -326,15 +340,21 @@ return stampit()
      * http://tools.ietf.org/html/rfc2616#section-9.7
      * @return {Promise} the {resource,response} object of this resource
      * **/
-    this.delete = function() {
-        const url = this.self
+    this.delete = function(cfg = {}) {
+        let { data, params } = cfg;
+        ;(delete cfg.data)
+        ;(delete cfg.params)
+        let url = this.self
+        if(params) {
+            url  = this.expand(url,params)[0]
+        }
         const req = {
             method: 'DELETE'
             , headers: {
                 'accept': MIME
             }
         }
-        return fetch(url, req)
+        return fetch(url, Object.assign(req, cfg))
         .then(headerHandler(req.method))
         //@TODO handle 200
         //by parsing to a HAL status entity
@@ -352,8 +372,14 @@ return stampit()
      * It will immediately issue an `GET` request to resync from the server.
      * @return {Promise} resolving to a {request,response} object for a new instance of this resource
      * */
-    this.patch  = function(to) {
-        const url = this.self
+    this.patch  = function(cfg = {}) {
+        let { data: to, params } = cfg;
+        ;(delete cfg.data)
+        ;(delete cfg.params)
+        let url = this.self
+        if(params) {
+            url  = this.expand(url,params)[0]
+        }
         let serialized = this.toJSON({ _links: false, _embedded: false})
         let dest = (to || serialized)
         let src = (to ? serialized : body)
@@ -367,7 +393,7 @@ return stampit()
             }
             , body: patch
         }
-        return fetch(url, req)
+        return fetch(url, Object.assign(req, cfg))
         .then(headerHandler(req.method))
         .then(sync.bind(this,this.self))
     }
@@ -376,8 +402,13 @@ return stampit()
      * Issues a `OPTIONS` request against this resource
      * @return {Promise} resolving an object having the `Response` and this instance (`resource`)
      **/
-    this.options = function() {
+    this.options = function(cfg = {}) {
+        let { params } = cfg;
+        ;(delete cfg.params)
         let url = this.self
+        if(params) {
+            url  = this.expand(url,params)[0]
+        }
         let req = {
             method: 'OPTIONS'
             , headers: {}
@@ -391,8 +422,13 @@ return stampit()
      * Issues a `HEAD` request against this resource
      * @return {Promise} resolving an object having the `Response` and this instance (`resource`)
      **/
-    this.head = function() {
+    this.head = function(cfg = {}) {
+        let { params } = cfg;
+        ;(delete cfg.params)
         let url = this.self
+        if(params) {
+            url  = this.expand(url,params)[0]
+        }
         let req = {
             method: 'HEAD'
             , headers: { }

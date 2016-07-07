@@ -162,7 +162,7 @@ test('GET with RFC6570 params works',(assert) => {
     let sut = hal({
         self: `${origin}/orders{?page,size}`
     })
-    return sut.get({page:2,size:10}).then((it) => {
+    return sut.get({ params: {page:2,size:10}}).then((it) => {
         assert.equal(sut.currentlyProcessing,14)
     })
     .then(fetchMock.restore.bind(fetchMock))
@@ -208,9 +208,36 @@ test('simple POST works',(assert) => {
     let sut = hal({
         self: `${origin}/orders`
     })
-    return sut.post({foo:'bar'}).then(({response, resource}) => {
+    return sut.post({data: {foo:'bar'}}).then(({response, resource}) => {
         assert.equal(response.status, 204)
         assert.equal(resource.self,`${origin}/orders`)
+    })
+    .then(fetchMock.restore.bind(fetchMock))
+})
+test('simple POST with expanded url works',(assert) => {
+    let body = fullyLoaded()
+    let matcher = (url, opts) => {
+        let {'content-type':contentType} = opts.headers
+        let { body} = opts
+        return contentType === 'application/json' &&
+            url === `${origin}/orders?q=why` &&
+            body === JSON.stringify({foo:'bar'})
+    }
+    fetchMock.mock(matcher, 'post', {
+        body: null
+        , headers: {
+            'content-type': 'application/hal+json'
+            , 'content-length': 0
+        }
+        ,status: 204
+    })
+
+    let sut = hal({
+        self: `${origin}/orders{?q}`
+    })
+    return sut.post({data: {foo:'bar'}, params: { q: 'why' }}).then(({response, resource}) => {
+        assert.equal(response.status, 204)
+        assert.equal(resource.self,`${origin}/orders{?q}`)
     })
     .then(fetchMock.restore.bind(fetchMock))
 })
@@ -248,7 +275,7 @@ test('POST resulting in location follows created entity',(assert) => {
     let sut = hal({
         self: `${origin}/orders`
     })
-    return sut.post({foo:'bar'}).then(({resource}) => {
+    return sut.post({ data: {foo:'bar'}}).then(({resource}) => {
         assert.equal(resource.self,`${origin}/orders/1`)
         assert.equal(resource.bar,'foo')
     })

@@ -40,6 +40,11 @@ In your browser, visit `http://localhost:3000/test-runner.html` and look in the 
 
 ### Usage
 
+**BREAKING CHANGE AS OF v0.3.0: All HTTP methods may receive a full request config object + `data` and `params`**
+
+A full Request object may be passed into all methods. For mutating methods, a `data` JSON parameter may be passed for serializing
+to the request body. For all methods a `params` Object parameter may be passed for expanding templated urls.
+
 #### GET
 
 ```js
@@ -51,7 +56,11 @@ let resource = hal({ self: ‘http://my.api.com{?foo’})
  * Host: http://my.api.com
  * Accept: application/hal+json
 **/
-resource.get({ foo: ‘bar’, fetch: globalFetch }).then({ resource, response }) => {
+resource.get({ 
+    params: { 
+        foo: ‘bar’, 
+    }
+}).then({ resource, response }) => {
     //the resource, mapped to the HAL body and ready for traversal
     //the response, whatever is returned from `fetch`
 })
@@ -73,7 +82,12 @@ let resource = hal({ self: ‘http://my.api.com’})
  *  “foo”: “bar”
  * }
 **/
-resource.post({ foo: ‘bar’, fetch: globalFetch }).then({ resource, response }) => {
+resource.post({
+    data: {
+        foo: ‘bar’, 
+    },
+    params: { q: 'foo' }
+}).then({ resource, response }) => {
     //the resource, mapped to the HAL body and ready for traversal
     // or, if a 201 with a `location` is returned, the new entity is returned
     //the response, whatever is returned from `fetch`
