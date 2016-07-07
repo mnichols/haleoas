@@ -3,6 +3,7 @@
 import stampit from 'stampit'
 import urlTemplate from 'url-template'
 import diff from 'json-patch-gen'
+import isString from 'lodash.isstring'
 
 
 /**
@@ -59,6 +60,13 @@ return stampit()
         return ignore
     }
     const parse = (json = {}) => {
+        if(isString(json)) {
+            try {
+                json = JSON.parse(json)
+            } catch(err) {
+                this.logerror('Failed to parse', json)
+            }
+        }
         let copy = Object.assign({},json)
         ;({_links:links,_embedded:embedded} = copy)
         ;(delete copy._links)
