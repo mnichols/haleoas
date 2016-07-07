@@ -207,6 +207,13 @@ const correctSelf = (ignore) =&gt; {
     return ignore
 }
 const parse = (json = {}) =&gt; {
+    if(isString(json)) {
+        try {
+            json = JSON.parse(json)
+        } catch(err) {
+            this.logerror('Failed to parse', json)
+        }
+    }
     let copy = Object.assign({},json)
     ;({_links:links,_embedded:embedded} = copy)
     ;(delete copy._links)
