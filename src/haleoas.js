@@ -100,7 +100,9 @@ return stampit()
             }
             let contentType = response.headers.get('content-type')
             let contentLength = response.headers.get('content-length')
-            if(contentType !== MIME) {
+            // even though this is the spec https://tools.ietf.org/html/rfc7158#section-8.1,
+            // some responses include encoding, so just check for the existence of the MIME
+            if(contentType.indexOf(MIME) < 0) {
                 let errorMessage = `illegal content type at ${response.url} : ${contentType}`
                 this.logerror(errorMessage)
                 return response
@@ -323,7 +325,6 @@ return stampit()
             method: 'GET'
             , headers: {
                 'accept': MIME
-                ,'content-type': MIME
             }
             //https://groups.yahoo.com/neo/groups/rest-discuss/conversations/messages/9962
             , body: undefined

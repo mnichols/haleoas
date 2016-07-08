@@ -147,6 +147,29 @@ test('simple GET works',(assert) => {
     })
     .then(fetchMock.restore.bind(fetchMock))
 })
+test('content-type with encoding works',(assert) => {
+    let body = fullyLoaded()
+    let matcher = (url, opts) => {
+        let {accept} = opts.headers
+        return accept === 'application/hal+json' && url === `${origin}/orders`
+    }
+    fetchMock.mock(matcher, 'get', {
+        body
+        ,headers: {
+            'content-type': 'application/hal+json; charset=utf-8'
+            , 'content-length': JSON.stringify(body).length
+        }
+        ,status: 200
+    })
+
+    let sut = hal({
+        self: `${origin}/orders`
+    })
+    return sut.get().then((it) => {
+        assert.equal(sut.currentlyProcessing,14)
+    })
+    .then(fetchMock.restore.bind(fetchMock))
+})
 
 test('GET with RFC6570 params works',(assert) => {
     let body = fullyLoaded()
