@@ -387,7 +387,7 @@ test('PATCH works (RFC6902) and refetches the resource', (assert) => {
 
         let {'content-type':contentType} = opts.headers
         return url === self.href &&
-            deepEqual(patches, body) &&
+            deepEqual(JSON.stringify(patches), body) &&
             contentType === 'application/json-patch+json'
     }
 
@@ -419,7 +419,7 @@ test('PATCH works (RFC6902) and refetches the resource', (assert) => {
         self: self.href
         , body
     })
-    return sut.patch({ foo: 'baz', deep: { thoughts: 'jazz'}})
+    return sut.patch({ data:  { foo: 'baz', deep: { thoughts: 'jazz'}}})
     .then(({response, resource}) => {
         assert.equal(response.status,200)
         assert.equal(resource.self,self.href)
@@ -449,7 +449,7 @@ test('PATCH uses current state against original (RFC6902) and refetches the reso
 
         let {'content-type':contentType} = opts.headers
         return url === self.href &&
-            deepEqual(patches, body) &&
+            deepEqual(JSON.stringify(patches), body) &&
             contentType === 'application/json-patch+json'
     }
 

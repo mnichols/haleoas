@@ -365,7 +365,7 @@ return stampit()
     /**
      * Issues a `PATCH` request against this resource
      * http://tools.ietf.org/html/rfc6902
-     * @param {Object} [to] optionally pass the patch data to use for diff
+     * @param {Object} [data] optionally pass the patch data to use for diff
      * When this argument is included, it will diff the current state of the
      * resource against that patch shape.
      * Otherwise, it will diff against the _original_ body and the current state
@@ -374,7 +374,7 @@ return stampit()
      * @return {Promise} resolving to a {request,response} object for a new instance of this resource
      * */
     this.patch  = function(cfg = {}) {
-        let { data: to, params } = cfg;
+        let { data, params } = cfg;
         ;(delete cfg.data)
         ;(delete cfg.params)
         let url = this.self
@@ -382,8 +382,8 @@ return stampit()
             url  = this.expand(url,params)[0]
         }
         let serialized = this.toJSON({ _links: false, _embedded: false})
-        let dest = (to || serialized)
-        let src = (to ? serialized : body)
+        let dest = (data || serialized)
+        let src = (data ? serialized : body)
         let patch = diff( src, dest )
 
         let req = {
@@ -392,7 +392,7 @@ return stampit()
                 'accept': MIME
                 ,'content-type': 'application/json-patch+json'
             }
-            , body: patch
+            , body: JSON.stringify(patch)
         }
         return fetch(url, Object.assign(req, cfg))
         .then(headerHandler(req.method))
