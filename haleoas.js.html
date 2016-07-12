@@ -661,7 +661,7 @@ const stringifyReplacer = (key, value) =&gt; {
             </thead>
             <tbody>
               <tr>
-                <td>[to]</td>
+                <td>[data]</td>
                 <td>Object</td>
                 <td><p>optionally pass the patch data to use for diff When this argument is included, it will diff the current state of the<br />resource against that patch shape.<br />Otherwise, it will diff against the <em>original</em> body and the current state<br />of the resource.<br />It will immediately issue an <code>GET</code> request to resync from the server.</p></td>
               </tr>
@@ -674,7 +674,7 @@ const stringifyReplacer = (key, value) =&gt; {
           </table>
           <div class="description"><p>Issues a <code>PATCH</code> request against this resource<br /><a href="http://tools.ietf.org/html/rfc6902">http://tools.ietf.org/html/rfc6902</a></p></div>
           <pre><code class="language-javascript">this.patch  = function(cfg = {}) {
-    let { data: to, params } = cfg;
+    let { data, params } = cfg;
     ;(delete cfg.data)
     ;(delete cfg.params)
     let url = this.self
@@ -682,8 +682,8 @@ const stringifyReplacer = (key, value) =&gt; {
         url  = this.expand(url,params)[0]
     }
     let serialized = this.toJSON({ _links: false, _embedded: false})
-    let dest = (to || serialized)
-    let src = (to ? serialized : body)
+    let dest = (data || serialized)
+    let src = (data ? serialized : body)
     let patch = diff( src, dest )
 
     let req = {
@@ -692,7 +692,7 @@ const stringifyReplacer = (key, value) =&gt; {
             'accept': MIME
             ,'content-type': 'application/json-patch+json'
         }
-        , body: patch
+        , body: JSON.stringify(patch)
     }
     return fetch(url, Object.assign(req, cfg))
     .then(headerHandler(req.method))
