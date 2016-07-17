@@ -163,26 +163,38 @@ let {fetch:globalFetch, Promise:globalPromise} = opts</code></pre>
             </thead>
             <tbody>
               <tr>
-                <td>url</td>
-                <td>Url</td>
-                <td><p><a href="http://tools.ietf.org/html/rfc6570">http://tools.ietf.org/html/rfc6570</a></p></td>
+                <td>link</td>
+                <td>Url, Object</td>
+                <td><p>or url with or without <a href="http://tools.ietf.org/html/rfc6570">http://tools.ietf.org/html/rfc6570</a></p></td>
               </tr>
               <tr>
                 <td>params</td>
-                <td>Object</td>
-                <td><p>parameters to expand in the url</p></td>
+                <td>Object, Array</td>
+                <td><p>object or array of objects to expand in the url</p></td>
               </tr>
               <tr>
                 <td>return</td>
-                <td>Url</td>
-                <td><p>the expanded url</p></td>
+                <td>Array</td>
+                <td><p>array of the expanded urls, one item per params object passed in</p></td>
               </tr>
             </tbody>
           </table>
-          <div class="description"><p>Expand a url conforming to <a href="http://tools.ietf.org/html/rfc6570">http://tools.ietf.org/html/rfc6570</a><br />with the params.</p></div>
+          <div class="description"><p>Expand a url conforming to <a href="http://tools.ietf.org/html/rfc6570">http://tools.ietf.org/html/rfc6570</a>,<br />or with <code>templated:false</code> to indicate concat of query params.</p></div>
           <pre><code class="language-javascript">expand: function(link, params) {
+    if(!params || Array.isArray(params) &amp;&amp; !params.length) {
+        return [link.href || link]
+    }
     //only arrays
     params = [].concat(params)
+    if(link.href &amp;&amp; !link.templated) {
+        // we arent doing templated uris, so try to parse+format
+        let parsed = url.parse(link.href, true)
+        ;(delete parsed.search)
+        return params.map(q =&gt; {
+            let opt = Object.assign({}, parsed.query, q)
+            return url.format(Object.assign({}, parsed, { query: opt }))
+        })
+    }
     let exp = urlTemplate.parse(link.href || link)
     return params.map((q)=&gt; {
         return exp.expand(q ||{})
@@ -469,9 +481,25 @@ const stringifyReplacer = (key, value) =&gt; {
     //allow non-global Promise
     let P = (this.Promise)
     let promises = lnks.map((lnk) =&gt; {
-        return stamp({ self: lnk.href, fetch })
+        return stamp({ self: lnk, fetch })
     })
     return P.all(promises)
+}
+const prepare = (cfg = {}) =&gt; {
+    let { data, params } = cfg;
+    let self = this.links('self')[0]
+    let {href} = self
+    if(params) {
+        href  = this.expand(self,params)[0]
+    }
+    ;(delete cfg.data)
+    ;(delete cfg.params)
+    return {
+        href,
+        cfg,
+        data,
+        params
+    }
 }
 
 //http api</code></pre>
@@ -505,13 +533,7 @@ const stringifyReplacer = (key, value) =&gt; {
           </table>
           <div class="description"><p>Issues a <code>POST</code> request against this resource<br />Follows up with a <code>GET</code> right away if a <code>Location</code> header is present, as in<br />a <code>201 Created</code> response.</p></div>
           <pre><code class="language-javascript">this.post = function(cfg = {}) {
-    let { data, params } = cfg;
-    ;(delete cfg.data)
-    ;(delete cfg.params)
-    let url = this.self
-    if(params) {
-        url  = this.expand(url,params)[0]
-    }
+    let { data, params, href, cfg:sanitized } = prepare(cfg)
     const req = {
         method: 'POST'
         , headers: {
@@ -520,7 +542,7 @@ const stringifyReplacer = (key, value) =&gt; {
         }
         , body: JSON.stringify(data)
     }
-    return fetch(url, Object.assign(req, cfg))
+    return fetch(href, Object.assign(req, sanitized))
     .then((response) =&gt; {
         let location = response.headers.get('location')
         if(location) {
@@ -543,13 +565,7 @@ const stringifyReplacer = (key, value) =&gt; {
           </section>
           <div class="description"><p>Issues a <code>PUT</code> request against this resource<br />Follows up with a <code>GET</code> right away to resync this resource.</p></div>
           <pre><code class="language-javascript">this.put = function(cfg = {}) {
-    let { data, params } = cfg;
-    ;(delete cfg.data)
-    ;(delete cfg.params)
-    let url = this.self
-    if(params) {
-        url  = this.expand(url,params)[0]
-    }
+    let { data, params, href, cfg:sanitized }= prepare(cfg)
     let serialized = this.toJSON()
     //dont include _links
     ;(delete serialized._links)
@@ -561,9 +577,9 @@ const stringifyReplacer = (key, value) =&gt; {
         }
         , body: JSON.stringify(serialized)
     }
-    return fetch(url, Object.assign(req, cfg))
+    return fetch(href, Object.assign(req, sanitized))
     .then(headerHandler(req.method))
-    .then(sync.bind(this,this.self))
+    .then(sync.bind(this,this.links('self')[0]))
 }</code></pre>
           <section id="get">
             <h1>get</h1>
@@ -595,12 +611,7 @@ const stringifyReplacer = (key, value) =&gt; {
           </table>
           <div class="description"></div>
           <pre><code class="language-javascript">this.get = function(cfg = {}) {
-    let { params } = cfg;
-    ;(delete cfg.params)
-    let url = this.self
-    if(params) {
-        url  = this.expand(url,params)[0]
-    }
+    let { params, href, cfg:sanitized }= prepare(cfg)
     const req = {
         method: 'GET'
         , headers: {
@@ -609,7 +620,7 @@ const stringifyReplacer = (key, value) =&gt; {
         //https://groups.yahoo.com/neo/groups/rest-discuss/conversations/messages/9962
         , body: undefined
     }
-    return fetch(url, Object.assign(req, cfg))
+    return fetch(href, Object.assign(req, sanitized))
     .then(bodyHandler(req.method))
     .then(headerHandler(req.method))
     .then(correctSelf)
@@ -624,20 +635,14 @@ const stringifyReplacer = (key, value) =&gt; {
           </section>
           <div class="description"><p>Issues a <code>DELETE</code> request against this resource<br /><a href="http://tools.ietf.org/html/rfc2616#section-9.7">http://tools.ietf.org/html/rfc2616#section-9.7</a></p></div>
           <pre><code class="language-javascript">this.delete = function(cfg = {}) {
-    let { data, params } = cfg;
-    ;(delete cfg.data)
-    ;(delete cfg.params)
-    let url = this.self
-    if(params) {
-        url  = this.expand(url,params)[0]
-    }
+    let { data, params, href, cfg:sanitized }= prepare(cfg)
     const req = {
         method: 'DELETE'
         , headers: {
             'accept': MIME
         }
     }
-    return fetch(url, Object.assign(req, cfg))
+    return fetch(href, Object.assign(req, sanitized))
     .then(headerHandler(req.method))
     //@TODO handle 200
     //by parsing to a HAL status entity
@@ -674,13 +679,7 @@ const stringifyReplacer = (key, value) =&gt; {
           </table>
           <div class="description"><p>Issues a <code>PATCH</code> request against this resource<br /><a href="http://tools.ietf.org/html/rfc6902">http://tools.ietf.org/html/rfc6902</a></p></div>
           <pre><code class="language-javascript">this.patch  = function(cfg = {}) {
-    let { data, params } = cfg;
-    ;(delete cfg.data)
-    ;(delete cfg.params)
-    let url = this.self
-    if(params) {
-        url  = this.expand(url,params)[0]
-    }
+    let { data, params, href, cfg:sanitized }= prepare(cfg)
     let serialized = this.toJSON({ _links: false, _embedded: false})
     let dest = (data || serialized)
     let src = (data ? serialized : body)
@@ -694,9 +693,9 @@ const stringifyReplacer = (key, value) =&gt; {
         }
         , body: JSON.stringify(patch)
     }
-    return fetch(url, Object.assign(req, cfg))
+    return fetch(href, Object.assign(req, sanitized))
     .then(headerHandler(req.method))
-    .then(sync.bind(this,this.self))
+    .then(sync.bind(this,this.links('self')[0]))
 }</code></pre>
           <section id="options">
             <h1>options</h1>
@@ -707,18 +706,13 @@ const stringifyReplacer = (key, value) =&gt; {
           </section>
           <div class="description"><p>Issues a <code>OPTIONS</code> request against this resource</p></div>
           <pre><code class="language-javascript">this.options = function(cfg = {}) {
-    let { params } = cfg;
-    ;(delete cfg.params)
-    let url = this.self
-    if(params) {
-        url  = this.expand(url,params)[0]
-    }
+    let { params, href, cfg: sanitized }= prepare(cfg)
     let req = {
         method: 'OPTIONS'
         , headers: {}
         , body: undefined
     }
-    return fetch(url, req)
+    return fetch(href, Object.assign(req, sanitized))
     .then(headerHandler(req.method))
     .then(respond(req.method))
 }</code></pre>
@@ -731,18 +725,13 @@ const stringifyReplacer = (key, value) =&gt; {
           </section>
           <div class="description"><p>Issues a <code>HEAD</code> request against this resource</p></div>
           <pre><code class="language-javascript">this.head = function(cfg = {}) {
-    let { params } = cfg;
-    ;(delete cfg.params)
-    let url = this.self
-    if(params) {
-        url  = this.expand(url,params)[0]
-    }
+    let { data, params, href, cfg:sanitized }= prepare(cfg)
     let req = {
         method: 'HEAD'
         , headers: { }
         , body: undefined
     }
-    return fetch(url, req)
+    return fetch(href, Object.assign(req, sanitized))
     .then(headerHandler(req.method))
     .then(respond(req.method))
 }
@@ -754,8 +743,12 @@ if(this.body) {
     parse(copy)
     correctSelf()
 } else if(this.self) {
-    //add self link immediately
-    links = { self: { href: this.self} }
+    if(this.self.href) {
+        links = { self: Object.assign({}, this.self) }
+    } else {
+        links = { self: { href: this.self, templated: false }}
+    }
+    correctSelf()
 }
 
 })
