@@ -183,8 +183,7 @@ test('GET with RFC6570 params works',(assert) => {
     })
 
     let sut = hal({
-        self: `${origin}/orders{?page,size}`
-    })
+        self: { href: `${origin}/orders{?page,size}`, templated: true }})
     return sut.get({ params: {page:2,size:10}}).then((it) => {
         assert.equal(sut.currentlyProcessing,14)
     })
@@ -256,7 +255,7 @@ test('simple POST with expanded url works',(assert) => {
     })
 
     let sut = hal({
-        self: `${origin}/orders{?q}`
+        self: { href: `${origin}/orders{?q}`, templated: true }
     })
     return sut.post({data: {foo:'bar'}, params: { q: 'why' }}).then(({response, resource}) => {
         assert.equal(response.status, 204)

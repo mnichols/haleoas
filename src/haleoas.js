@@ -4,6 +4,7 @@ import stampit from 'stampit'
 import urlTemplate from 'url-template'
 import diff from 'json-patch-gen'
 import isString from 'lodash.isstring'
+import url from 'url'
 
 
 /**
@@ -27,15 +28,27 @@ let {fetch:globalFetch, Promise:globalPromise} = opts
 return stampit()
 .static({
     /**
-     * Expand a url conforming to http://tools.ietf.org/html/rfc6570
-     * with the params.
-     * @param {Url} url http://tools.ietf.org/html/rfc6570
-     * @param {Object} params parameters to expand in the url
-     * @return {Url} the expanded url
+     * Expand a url conforming to http://tools.ietf.org/html/rfc6570,
+     * or with `templated:false` to indicate concat of query params.
+     * @param {Url|Object} link or url with or without http://tools.ietf.org/html/rfc6570
+     * @param {Object|Array} params object or array of objects to expand in the url
+     * @return {Array} array of the expanded urls, one item per params object passed in
      * */
     expand: function(link, params) {
+        if(!params || Array.isArray(params) && !params.length) {
+            return [link.href || link]
+        }
         //only arrays
         params = [].concat(params)
+        if(link.href && !link.templated) {
+            // we arent doing templated uris, so try to parse+format
+            let parsed = url.parse(link.href, true)
+            ;(delete parsed.search)
+            return params.map(q => {
+                let opt = Object.assign({}, parsed.query, q)
+                return url.format(Object.assign({}, parsed, { query: opt }))
+            })
+        }
         let exp = urlTemplate.parse(link.href || link)
         return params.map((q)=> {
             return exp.expand(q ||{})
@@ -233,9 +246,25 @@ return stampit()
         //allow non-global Promise
         let P = (this.Promise)
         let promises = lnks.map((lnk) => {
-            return stamp({ self: lnk.href, fetch })
+            return stamp({ self: lnk, fetch })
         })
         return P.all(promises)
+    }
+    const prepare = (cfg = {}) => {
+        let { data, params } = cfg;
+        let self = this.links('self')[0]
+        let {href} = self
+        if(params) {
+            href  = this.expand(self,params)[0]
+        }
+        ;(delete cfg.data)
+        ;(delete cfg.params)
+        return {
+            href,
+            cfg,
+            data,
+            params
+        }
     }
 
     //http api
@@ -248,13 +277,7 @@ return stampit()
      * (when a `Location` header is present in response) or the current instance.
      * **/
     this.post = function(cfg = {}) {
-        let { data, params } = cfg;
-        ;(delete cfg.data)
-        ;(delete cfg.params)
-        let url = this.self
-        if(params) {
-            url  = this.expand(url,params)[0]
-        }
+        let { data, params, href, cfg:sanitized } = prepare(cfg)
         const req = {
             method: 'POST'
             , headers: {
@@ -263,7 +286,7 @@ return stampit()
             }
             , body: JSON.stringify(data)
         }
-        return fetch(url, Object.assign(req, cfg))
+        return fetch(href, Object.assign(req, sanitized))
         .then((response) => {
             let location = response.headers.get('location')
             if(location) {
@@ -284,13 +307,7 @@ return stampit()
      * @return {Promise} resolving to a {request,response} object for a new instance of this resource
      * **/
     this.put = function(cfg = {}) {
-        let { data, params } = cfg;
-        ;(delete cfg.data)
-        ;(delete cfg.params)
-        let url = this.self
-        if(params) {
-            url  = this.expand(url,params)[0]
-        }
+        let { data, params, href, cfg:sanitized }= prepare(cfg)
         let serialized = this.toJSON()
         //dont include _links
         ;(delete serialized._links)
@@ -302,9 +319,9 @@ return stampit()
             }
             , body: JSON.stringify(serialized)
         }
-        return fetch(url, Object.assign(req, cfg))
+        return fetch(href, Object.assign(req, sanitized))
         .then(headerHandler(req.method))
-        .then(sync.bind(this,this.self))
+        .then(sync.bind(this,this.links('self')[0]))
     }
     /**
      * @param {Object} [params] optionally provide params for `self` having a url
@@ -315,12 +332,7 @@ return stampit()
      * and this instance will remain untouched.
      **/
     this.get = function(cfg = {}) {
-        let { params } = cfg;
-        ;(delete cfg.params)
-        let url = this.self
-        if(params) {
-            url  = this.expand(url,params)[0]
-        }
+        let { params, href, cfg:sanitized }= prepare(cfg)
         const req = {
             method: 'GET'
             , headers: {
@@ -329,7 +341,7 @@ return stampit()
             //https://groups.yahoo.com/neo/groups/rest-discuss/conversations/messages/9962
             , body: undefined
         }
-        return fetch(url, Object.assign(req, cfg))
+        return fetch(href, Object.assign(req, sanitized))
         .then(bodyHandler(req.method))
         .then(headerHandler(req.method))
         .then(correctSelf)
@@ -342,20 +354,14 @@ return stampit()
      * @return {Promise} the {resource,response} object of this resource
      * **/
     this.delete = function(cfg = {}) {
-        let { data, params } = cfg;
-        ;(delete cfg.data)
-        ;(delete cfg.params)
-        let url = this.self
-        if(params) {
-            url  = this.expand(url,params)[0]
-        }
+        let { data, params, href, cfg:sanitized }= prepare(cfg)
         const req = {
             method: 'DELETE'
             , headers: {
                 'accept': MIME
             }
         }
-        return fetch(url, Object.assign(req, cfg))
+        return fetch(href, Object.assign(req, sanitized))
         .then(headerHandler(req.method))
         //@TODO handle 200
         //by parsing to a HAL status entity
@@ -374,13 +380,7 @@ return stampit()
      * @return {Promise} resolving to a {request,response} object for a new instance of this resource
      * */
     this.patch  = function(cfg = {}) {
-        let { data, params } = cfg;
-        ;(delete cfg.data)
-        ;(delete cfg.params)
-        let url = this.self
-        if(params) {
-            url  = this.expand(url,params)[0]
-        }
+        let { data, params, href, cfg:sanitized }= prepare(cfg)
         let serialized = this.toJSON({ _links: false, _embedded: false})
         let dest = (data || serialized)
         let src = (data ? serialized : body)
@@ -394,9 +394,9 @@ return stampit()
             }
             , body: JSON.stringify(patch)
         }
-        return fetch(url, Object.assign(req, cfg))
+        return fetch(href, Object.assign(req, sanitized))
         .then(headerHandler(req.method))
-        .then(sync.bind(this,this.self))
+        .then(sync.bind(this,this.links('self')[0]))
     }
 
     /**
@@ -404,18 +404,13 @@ return stampit()
      * @return {Promise} resolving an object having the `Response` and this instance (`resource`)
      **/
     this.options = function(cfg = {}) {
-        let { params } = cfg;
-        ;(delete cfg.params)
-        let url = this.self
-        if(params) {
-            url  = this.expand(url,params)[0]
-        }
+        let { params, href, cfg: sanitized }= prepare(cfg)
         let req = {
             method: 'OPTIONS'
             , headers: {}
             , body: undefined
         }
-        return fetch(url, req)
+        return fetch(href, Object.assign(req, sanitized))
         .then(headerHandler(req.method))
         .then(respond(req.method))
     }
@@ -424,18 +419,13 @@ return stampit()
      * @return {Promise} resolving an object having the `Response` and this instance (`resource`)
      **/
     this.head = function(cfg = {}) {
-        let { params } = cfg;
-        ;(delete cfg.params)
-        let url = this.self
-        if(params) {
-            url  = this.expand(url,params)[0]
-        }
+        let { data, params, href, cfg:sanitized }= prepare(cfg)
         let req = {
             method: 'HEAD'
             , headers: { }
             , body: undefined
         }
-        return fetch(url, req)
+        return fetch(href, Object.assign(req, sanitized))
         .then(headerHandler(req.method))
         .then(respond(req.method))
     }
@@ -447,8 +437,12 @@ return stampit()
         parse(copy)
         correctSelf()
     } else if(this.self) {
-        //add self link immediately
-        links = { self: { href: this.self} }
+        if(this.self.href) {
+            links = { self: Object.assign({}, this.self) }
+        } else {
+            links = { self: { href: this.self, templated: false }}
+        }
+        correctSelf()
     }
 
 })

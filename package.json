@@ -61,6 +61,7 @@
     "json-patch-gen": "^1.0.2",
     "lodash.isstring": "^4.0.1",
     "stampit": "^2.1.0",
+    "url": "^0.11.0",
     "url-template": "^2.0.6"
   },
   "jspm": {

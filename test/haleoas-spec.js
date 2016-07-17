@@ -81,6 +81,26 @@ test('expanding link on proto works', (assert) => {
     assert.equal(multi[1],'/a?foo=2')
     assert.end()
 })
+test('expanding link on resource works without template',(assert) => {
+    let lnk = {
+        href: '/a',
+        templated: false
+    }
+    let sut = hal({ selfLink: lnk })
+    let result = sut.expand(lnk, { foo: 1, bar: 2 });
+    assert.deepEqual(result, ['/a?foo=1&bar=2']);
+    assert.end()
+})
+test('expanding link with search on resource works without template',(assert) => {
+    let lnk = {
+        href: '/a?baz=x',
+        templated: false
+    }
+    let sut = hal({ selfLink: lnk })
+    let result = sut.expand(lnk, { foo: 1, bar: 2 });
+    assert.deepEqual(result, ['/a?baz=x&foo=1&bar=2']);
+    assert.end()
+})
 test('body is supported in initialization',(assert) => {
     let body = {
         "_links": {
