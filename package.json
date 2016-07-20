@@ -1,6 +1,6 @@
 {
   "name": "haleoas",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "HAL client",
   "main": "./dist/haleoas.js",
   "scripts": {
