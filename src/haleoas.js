@@ -125,7 +125,9 @@ return stampit()
                 return response
             }
             try {
-                return response.json()
+                //be a gentleman...dont keep downstreamers from using the response
+                let cloned = response.clone();
+                return cloned.json()
                 .then(parse)
                 .then(() => {
                     return response
