@@ -55,7 +55,7 @@
     "jspm": "^0.16.19",
     "mr-doc": "^3.0.7",
     "rimraf": "^2.4.3",
-    "serve": "^1.4.0"
+    "serve": "^11.2.0"
   },
   "dependencies": {
     "json-patch-gen": "^1.0.2",
